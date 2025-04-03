@@ -293,6 +293,13 @@ def exportDimensions():
 
     ws.add_table(tab)
 
+    # Add protection
+    ws.protection.sheet = True
+    ws.protection.sort = False
+    ws.protection.autoFilter = False
+    ws.protection.password = '456'
+    ws.protection.enable()
+
     savePath = util.saveWorkbook(wb, Path(config.PARENT_DIR_PATH, r"存档\零件规格总览.xlsx"), True)
 
     if os.getlogin() == "OT03":

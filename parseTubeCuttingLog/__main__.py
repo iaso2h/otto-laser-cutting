@@ -27,6 +27,7 @@ if __name__ == "__main__":
     argParser = argparse.ArgumentParser()
     argParser.add_argument("-L", "--legacy", action="store_true")
     argParser.add_argument("-D", "--dev",    action="store_true")
+    argParser.add_argument("-R", "--rtf",    action="store_true")
     args = argParser.parse_args()
     config.DEV_MODE = args.dev
     if args.legacy:
@@ -35,6 +36,9 @@ if __name__ == "__main__":
         config.GUI_MODE = False
         cli.cliStart()
         input("Press enter to proceed...")
+    elif args.rtf:
+        import rtfParse
+        rtfParse.parseAllLog()
     else:
         config.GUI_MODE = True
         import hotkey
