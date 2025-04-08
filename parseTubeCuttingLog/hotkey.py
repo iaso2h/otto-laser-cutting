@@ -1,3 +1,5 @@
+import keySet
+
 from pynput import keyboard
 from pynput.mouse import Button, Controller
 from PIL import ImageGrab
@@ -9,7 +11,7 @@ import console
 
 mouse = Controller()
 mouseInterval = 0.075
-print = console.print
+# print = console.print
 
 
 def hotkeyAlignTube():
@@ -103,10 +105,33 @@ def coordinateEcho():
     # 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
     # To also change icon, add these values to previous number
     # 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+def onPress(key):
+    try:
+        keyName = key.char
+    except AttributeError:
+        keyName = key.name
+    if "alt" in keyName:
+        keyName = "alt"
+    if "ctrl" in keyName:
+        keyName = "ctrl"
 
-with keyboard.GlobalHotKeys({
-        "<alt>+a":                hotkeyAlignTube,
-        "<ctrl>+<shift>+<alt>+p": coordinateEcho
-    }) as h:
-    import gui
-    h.join()
+    keySet.keys.add(keyName)
+
+    if {"alt", "a"}.issubset(keySet.keys):
+        hotkeyAlignTube()
+
+
+def onRelease(key):
+    try:
+        keyName = key.char
+    except AttributeError:
+        keyName = key.name
+    if "alt" in keyName:
+        keyName = "alt"
+    if "ctrl" in keyName:
+        keyName = "ctrl"
+
+    keySet.keys.add(keyName)
+
+    if key in keySet.keys:
+        keySet.keys.remove(key)

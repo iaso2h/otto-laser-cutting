@@ -2,6 +2,7 @@ import util
 import config
 import console
 import style
+import keySet
 
 import chardet
 import os
@@ -204,6 +205,8 @@ def parseAllLog():
 
 
 def parseWeeklyLog():
+    if "ctrl" in keySet.keys:
+        return os.startfile(config.LASER_PROFILE_PATH)
     wb = Workbook()
     now = datetime.datetime.now()
     timeDelta = datetime.timedelta(days=7)

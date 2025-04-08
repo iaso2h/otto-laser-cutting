@@ -1,6 +1,8 @@
 import console
 import config
 import argparse
+import hotkey
+import gui
 config.updaPath()
 
 if not config.PARENT_DIR_PATH.exists():
@@ -41,4 +43,11 @@ if __name__ == "__main__":
         rtfParse.parseAllLog()
     else:
         config.GUI_MODE = True
-        import hotkey
+        listener= hotkey.keyboard.Listener(
+                on_press   = hotkey.onPress,
+                on_release = hotkey.onRelease
+            )
+        listener.start()
+        gui.dpg.show_viewport()
+        gui.dpg.start_dearpygui()
+        gui.dpg.destroy_context()

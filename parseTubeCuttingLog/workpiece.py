@@ -2,6 +2,8 @@ import config
 import console
 import util
 import shutil
+import keySet
+import subprocess
 
 import re
 import os
@@ -31,7 +33,9 @@ def removeDummyLaserFile(p: Path) -> None:
             pass
 
 
-def workpieceNamingVerification() -> None:
+def workpieceNamingVerification():
+    if "ctrl" in keySet.keys:
+        return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
     laserFilePaths = util.getAllLaserFiles()
     if not laserFilePaths:
         print("All files match the naming convention!")
@@ -49,6 +53,8 @@ def workpieceNamingVerification() -> None:
         print("没有不规范的工件名称")
 
 def removeRedundantLaserFile() -> None:
+    if "ctrl" in keySet.keys:
+        return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
     rawLaserFile = []
 
     if not config.LASER_FILE_DIR_PATH.exists():
@@ -91,6 +97,9 @@ def removeRedundantLaserFile() -> None:
 
 
 def exportDimensions():
+    dstPath = Path(config.WAREHOUSING_PATH, "零件规格总览.xlsx")
+    if "ctrl" in keySet.keys:
+        return os.startfile(dstPath)
     laserFilePaths = util.getAllLaserFiles()
     with open(config.WORKPIECE_DICT, "r", encoding="utf-8") as f:
         workpieceDict = json.load(f)
@@ -300,11 +309,11 @@ def exportDimensions():
     ws.protection.password = '456'
     ws.protection.enable()
 
-    savePath = util.saveWorkbook(wb, Path(config.PARENT_DIR_PATH, r"存档\零件规格总览.xlsx"), True)
+    savePath = util.saveWorkbook(wb, dstPath, True)
 
     if os.getlogin() == "OT03":
         if config.WAREHOUSING_PATH.exists():
-            shutil.copy2(savePath, Path(config.WAREHOUSING_PATH, "零件规格总览.xlsx"))
+            shutil.copy2(savePath, dstPath)
 
 
 

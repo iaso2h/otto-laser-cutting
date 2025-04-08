@@ -1,6 +1,7 @@
 import util
 import console
 import config
+import keySet
 
 import shutil
 import datetime
@@ -49,6 +50,8 @@ def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
 
 
 def takeScreenshot() -> None: # {{{
+    if "ctrl" in keySet.keys:
+        return os.startfile(config.CUT_RECORD_PATH)
     import win32gui
     import win32process
     import psutil
@@ -258,6 +261,8 @@ def updateScreenshotRecords(): # {{{
 
 
 def relinkScreenshots():
+    if "ctrl" in keySet.keys:
+        return os.startfile(config.CUT_RECORD_PATH)
     # TODO: highlight invalid ones
     wb = getWorkbook()
     for ws in wb.worksheets:
