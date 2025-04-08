@@ -1,9 +1,11 @@
 import console
 import config
-import argparse
+config.updaPath()
+
 import hotkey
 import gui
-config.updaPath()
+
+import argparse
 
 if not config.PARENT_DIR_PATH.exists():
     import os
