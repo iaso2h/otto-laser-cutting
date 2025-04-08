@@ -80,6 +80,12 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
                 parseResult[laserFileLastOpen]["loopIntervalCounter"][f"{loopInterval}"] += 1
                 if parseResult[laserFileLastOpen]["workpieceCount"] == 0:
                     parseResult[laserFileLastOpen]["workpieceCount"] = loopStartMatch.group(2)
+    if not parseResult:
+        if saveChk:
+            util.saveWorkbook(wb)
+        else:
+            return wb
+
 
     if wb.active.title == "Sheet": # type: ignore
         ws = wb.active # type: Worksheet
@@ -95,23 +101,28 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
     ws.column_dimensions["C"].width = 12
     ws[f"D{1}"].value = "最后统计日期"
     ws.column_dimensions["D"].width = 22
-    ws[f"E{1}"].value = "工件目标"
-    ws.column_dimensions["E"].width = 12
-    ws[f"F{1}"].value = "已加工数"
-    ws.column_dimensions["F"].width = 12
-    ws[f"G{1}"].value = "目标耗时"
-    ws.column_dimensions["G"].width = 15
-    ws[f"H{1}"].value = "预计完成时间"
-    ws.column_dimensions["H"].width = 22
-    for col in range(1, 9):
-        ws.cell(row=1, column=col).style = "Headline 1"
+    ws[f"E{1}"].value = "工件目标数"
+    ws.column_dimensions["E"].width = 14
+    ws[f"F{1}"].value = "工件已加工数"
+    ws.column_dimensions["F"].width = 17
+    ws[f"G{1}"].value = "预计消耗长料"
+    ws.column_dimensions["G"].width = 17
+    ws[f"H{1}"].value = "预计消耗时长"
+    ws.column_dimensions["H"].width = 17
+    ws[f"I{1}"].value = "预计完成时间"
+    ws.column_dimensions["I"].width = 22
+    for col in range(1, 10):
+        ws.cell(row=1, column=col).style     = "Headline 1"
+        ws.cell(row=1, column=col).alignment = style.alCenter
 
     for laserFileName, laserFileInfo in parseResult.items():
-        laserFileStartRow = ws.max_row
         if len(laserFileInfo["loop"]) < 1:
             continue
+
         mostCommon = laserFileInfo["loopIntervalCounter"].most_common(5)
+        laserFileStartRow = ws.max_row
         skipRowCount = 0
+        headlineBorderSet = False
         for intervalIdx, common in enumerate(mostCommon):
             currentRow = intervalIdx + laserFileStartRow + 1 - skipRowCount
             interval      = common[0]
@@ -134,7 +145,7 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
                     )
                     ws.cell(row=laserFileStartRow+1,column=1).alignment = style.alCenterWrap
 
-            # Don't fill in 0
+            # Don't fill in sheet when interval between two loop is 0
             if interval == "0":
                 skipRowCount += 1
                 continue
@@ -145,21 +156,25 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
             ws.cell(row=currentRow, column=3).number_format = '0"次"'
             ws.cell(row=currentRow, column=4).value = laserFileInfo["loopIntervalUpdated"][interval]
             ws.cell(row=currentRow, column=5).value = 100
-            ws.cell(row=currentRow, column=5).number_format = '0"个"'
-            ws.cell(row=currentRow, column=5).style = style.style["input"]
+            ws.cell(row=currentRow, column=5).font = style.font["orangeBold"]
+            ws.cell(row=currentRow, column=5).number_format = '0"支"'
             ws.cell(row=currentRow, column=5).protection = Protection(locked=False)
             ws.cell(row=currentRow, column=6).value = 0
-            ws.cell(row=currentRow, column=6).number_format = '0"个"'
-            ws.cell(row=currentRow, column=6).style = style.style["input"]
+            ws.cell(row=currentRow, column=6).font = style.font["greenBold"]
+            ws.cell(row=currentRow, column=6).number_format = '0"支"'
             ws.cell(row=currentRow, column=6).protection = Protection(locked=False)
-            ws.cell(row=currentRow, column=7).value = f'=(B{currentRow}+1)/{laserFileInfo["workpieceCount"]}*(E{currentRow}-F{currentRow})/86400'
-            ws.cell(row=currentRow, column=7).number_format = "[h]时mm分ss秒"
-            ws.cell(row=currentRow, column=8).value = f'=NOW() + G{currentRow}'
-            ws.cell(row=currentRow, column=8).number_format = "yyyy-m-d h:mm:ss"
+            ws.cell(row=currentRow, column=7).value = f'=(E{currentRow}-F{currentRow})/{laserFileInfo["workpieceCount"]}'
+            ws.cell(row=currentRow, column=7).number_format = '0"支"'
+            ws.cell(row=currentRow, column=8).value = f'=(B{currentRow}+1)/{laserFileInfo["workpieceCount"]}*(E{currentRow}-F{currentRow})/86400'
+            ws.cell(row=currentRow, column=8).number_format = "[h]时mm分ss秒"
+            ws.cell(row=currentRow, column=9).value = f'=NOW() + H{currentRow}'
+            ws.cell(row=currentRow, column=9).number_format = "yyyy-m-d h:mm:ss"
 
 
-            if intervalIdx == 0:
+            if not headlineBorderSet:
                 # Add top border
+                headlineBorderSet = True
+                ws.cell(row=currentRow, column=1).value = laserFileName
                 ws[f"A{currentRow}"].border = style.borderMedium
                 ws[f"B{currentRow}"].border = style.borderMedium
                 ws[f"C{currentRow}"].border = style.borderMedium
@@ -168,7 +183,7 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
                 ws[f"F{currentRow}"].border = style.borderMedium
                 ws[f"G{currentRow}"].border = style.borderMedium
                 ws[f"H{currentRow}"].border = style.borderMedium
-                ws.cell(row=currentRow, column=1).value = laserFileName
+                ws[f"I{currentRow}"].border = style.borderMedium
 
 
     ws.protection.sheet = True
