@@ -1,7 +1,6 @@
 import console
 import config
 import cutRecord
-import dispatch
 import workpiece
 import util
 import rtfParse
@@ -10,11 +9,6 @@ import os
 import json
 import dearpygui.dearpygui as dpg
 import win32api
-
-
-def unmergeAllCellSave():
-    dispatch.unmergeAllCell(dispatch.wb.active)
-    util.saveWorkbook(dispatch.wb, config.DISPATCH_FILE_PATH)
 
 if win32api.GetSystemMetrics(0) < win32api.GetSystemMetrics(1) and config.GUI_GEOMETRY_PATH.exists():
     with open(config.GUI_GEOMETRY_PATH, "r", encoding="utf-8") as f:
@@ -72,12 +66,6 @@ with dpg.window(
         dpg.add_button(label="命名检查",     callback=workpiece.workpieceNamingVerification)
         dpg.add_button(label="工件规格总览", callback=workpiece.exportDimensions)
         dpg.add_button(label="删除冗余排样", callback=workpiece.removeRedundantLaserFile)
-    if loginName == "OT03":
-        dpg.add_separator(label="派工单")
-        with dpg.group(horizontal=True):
-            dpg.add_button(label="填写工件", callback=dispatch.fillPartInfo)
-            dpg.add_button(label="表格优化", callback=dispatch.beautifyCells)
-            dpg.add_button(label="取消合并", callback=unmergeAllCellSave)
     dpg.add_input_text(
             multiline=True,
             default_value=console.logFlow,
@@ -98,6 +86,3 @@ with dpg.window(
         dpg.add_button(label="清除日志", callback=clearLog)
 
 
-dpg.show_viewport()
-dpg.start_dearpygui()
-dpg.destroy_context()
