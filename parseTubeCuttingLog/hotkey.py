@@ -110,10 +110,14 @@ def onPress(key):
         keyName = key.char
     except AttributeError:
         keyName = key.name
+
+    # Convert modifiers
     if "alt" in keyName:
         keyName = "alt"
-    if "ctrl" in keyName:
+    elif "ctrl" in keyName:
         keyName = "ctrl"
+    elif "shift" in keyName:
+        keyName = "shift"
 
     keySet.keys.add(keyName)
 
@@ -126,12 +130,19 @@ def onRelease(key):
         keyName = key.char
     except AttributeError:
         keyName = key.name
+
+    # Convert modifiers
     if "alt" in keyName:
         keyName = "alt"
-    if "ctrl" in keyName:
+    elif "ctrl" in keyName:
         keyName = "ctrl"
+    elif "shift" in keyName:
+        keyName = "shift"
 
-    keySet.keys.add(keyName)
+    if keyName in keySet.keys:
+        keySet.keys.remove(keyName)
 
-    if key in keySet.keys:
-        keySet.keys.remove(key)
+        # Reset keySet if necessary
+        if "ctrl" == keyName or "shift" == keyName or "alt" == keyName:
+            if "ctrl" not in keySet.keys and "shift" not in keySet.keys and "alt" not in keySet.keys:
+                keySet.keys = set()
