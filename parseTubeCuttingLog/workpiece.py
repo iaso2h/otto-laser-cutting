@@ -97,9 +97,10 @@ def removeRedundantLaserFile() -> None:
 
 
 def exportDimensions():
-    dstPath = Path(config.WAREHOUSING_PATH, "零件规格总览.xlsx")
+    dstPath1 = config.WORKPIECE_INFO_PATH
+    dstPath2 = Path(config.WAREHOUSING_PATH, "零件规格总览.xlsx")
     if "ctrl" in keySet.keys:
-        return os.startfile(dstPath)
+        return os.startfile(dstPath1)
     laserFilePaths = util.getAllLaserFiles()
     with open(config.WORKPIECE_DICT, "r", encoding="utf-8") as f:
         workpieceDict = json.load(f)
@@ -236,7 +237,7 @@ def exportDimensions():
                 # ws[f"H{rowMax}"].value = workpiece2ndParameterNum
                 # ws[f"H{rowMax}"].number_format = BUILTIN_FORMATS[2]
             ws[f"G{rowMax}"].value = workpieceLength
-            ws[f"G{rowMax}"].number_format = BUILTIN_FORMATS[2]
+            ws[f"G{rowMax}"].number_format = "0.0"
 
         # Calculate the surface area
         if workpieceDimension and fileNameMatchTick and "∅" in workpieceDimension and "L" in workpieceDimension:
@@ -309,11 +310,5 @@ def exportDimensions():
     ws.protection.password = '456'
     ws.protection.enable()
 
-    savePath = util.saveWorkbook(wb, dstPath, True)
-
-    if os.getlogin() == "OT03":
-        if config.WAREHOUSING_PATH.exists():
-            shutil.copy2(savePath, dstPath)
-
-
-
+    savePath = util.saveWorkbook(wb, dstPath1, True)
+    savePath = util.saveWorkbook(wb, dstPath2, False)

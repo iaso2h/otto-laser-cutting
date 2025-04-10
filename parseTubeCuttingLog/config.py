@@ -30,6 +30,7 @@ LASER_OCR_FIX_PATH                   = ""
 PRODUCT_ID_CATERGORY_CONVENTION_PATH = ""
 GUI_GEOMETRY_PATH = ""
 WORKPIECE_DICT = ""
+WORKPIECE_INFO_PATH = ""
 
 def updaPath():
     global LASER_FILE_DIR_PATH
@@ -43,6 +44,7 @@ def updaPath():
     global PRODUCT_ID_CATERGORY_CONVENTION_PATH
     global GUI_GEOMETRY_PATH
     global WORKPIECE_DICT
+    global WORKPIECE_INFO_PATH
 
     LASER_FILE_DIR_PATH  = Path(PARENT_DIR_PATH, r"切割文件")
     DISPATCH_FILE_PATH   = Path(PARENT_DIR_PATH, r"派工单（模板+空表）.xlsx")
@@ -50,6 +52,7 @@ def updaPath():
     CUT_RECORD_PATH      = Path(PARENT_DIR_PATH, r"存档/开料记录.xlsx")
     LASER_PORFILING_PATH = Path(PARENT_DIR_PATH, r"存档/开料耗时.xlsx")
     LASER_PROFILE_PATH   = Path(PARENT_DIR_PATH, r"存档/耗时计算.xlsx")
+    WORKPIECE_INFO_PATH  = Path(PARENT_DIR_PATH, r"存档/零件规格总览.xlsx")
     LASER_LOG_PATH       = Path(PARENT_DIR_PATH, r"存档/切割机日志")
     LASER_OCR_FIX_PATH                   = Path(PARENT_DIR_PATH, r"辅助程序/激光名称OCR修复规则.json")
     PRODUCT_ID_CATERGORY_CONVENTION_PATH = Path(PARENT_DIR_PATH, r"辅助程序/型号类别对照规则.json")
