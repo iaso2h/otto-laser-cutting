@@ -8,7 +8,6 @@ import chardet
 import os
 import re
 import datetime
-import time
 from typing import Optional
 from collections import Counter
 from pathlib import Path
@@ -16,7 +15,6 @@ from striprtf.striprtf import rtf_to_text
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Protection
-from openpyxl.styles.alignment import Alignment
 
 
 def getWorkbook():
@@ -207,9 +205,16 @@ def parseAllLog():
 def parseWeeklyLog():
     if "ctrl" in keySet.keys:
         return os.startfile(config.LASER_PROFILE_PATH)
+    if "shift" in keySet.keys:
+        timeDelta = 7
+    elif "alt" in keySet.keys:
+        return parseAllLog()
+    else:
+        timeDelta = 1
+
     wb = Workbook()
     now = datetime.datetime.now()
-    timeDelta = datetime.timedelta(days=7)
+    timeDelta = datetime.timedelta(days=timeDelta)
     for f in Path(config.LASER_LOG_PATH).iterdir():
         if f.suffix == ".rtf":
             logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)

@@ -304,11 +304,11 @@ def exportDimensions():
     ws.add_table(tab)
 
     # Add protection
-    ws.protection.sheet = True
-    ws.protection.sort = False
-    ws.protection.autoFilter = False
-    ws.protection.password = '456'
-    ws.protection.enable()
+    # ws.protection.sheet = True
+    # ws.protection.sort = False
+    # ws.protection.autoFilter = False
+    # ws.protection.password = '456'
+    # ws.protection.enable()
 
     savePath = util.saveWorkbook(wb, dstPath1, True)
     savePath = util.saveWorkbook(wb, dstPath2, False)
