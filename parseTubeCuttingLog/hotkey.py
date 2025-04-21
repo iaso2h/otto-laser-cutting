@@ -110,6 +110,8 @@ def onPress(key):
         keyName = key.char
     except AttributeError:
         keyName = key.name
+    if not keyName:
+        return
 
     # Convert modifiers
     if "alt" in keyName:
@@ -130,6 +132,8 @@ def onRelease(key):
         keyName = key.char
     except AttributeError:
         keyName = key.name
+    if not keyName:
+        return
 
     # Convert modifiers
     if "alt" in keyName:
