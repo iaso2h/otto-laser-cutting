@@ -206,18 +206,31 @@ def parseWeeklyLog():
     if "ctrl" in keySet.keys:
         return os.startfile(config.LASER_PROFILE_PATH)
     if "shift" in keySet.keys:
-        timeDelta = 7
+        timeDeltaLiteral = 7
     elif "alt" in keySet.keys:
         return parseAllLog()
     else:
-        timeDelta = 1
+        timeDeltaLiteral = 1
 
     wb = Workbook()
     now = datetime.datetime.now()
-    timeDelta = datetime.timedelta(days=timeDelta)
-    for f in Path(config.LASER_LOG_PATH).iterdir():
-        if f.suffix == ".rtf":
-            logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
-            if now - logTime <= timeDelta:
-                wb = parse(f, False, wb) # type: ignore
-    util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
+    parsedCount = 0
+    for loopCount in range(3):
+        if parsedCount > 0:
+            break
+        else:
+            # Increase the time delta window to if no parsed files
+            timeDeltaLiteral = timeDeltaLiteral * (7 ** loopCount)
+        timeDelta = datetime.timedelta(days=timeDeltaLiteral)
+
+        for f in Path(config.LASER_LOG_PATH).iterdir():
+            if f.suffix == ".rtf":
+                logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
+                if now - logTime <= timeDelta:
+                    wb = parse(f, False, wb) # type: ignore
+                    parsedCount += 1
+
+    if not parsedCount:
+        print("No available .rtf log file to parse.")
+    else:
+        util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
