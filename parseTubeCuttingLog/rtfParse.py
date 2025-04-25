@@ -47,38 +47,41 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
     with open(rtfFile, "r", encoding=getEncoding(str(rtfFile))) as f:
         content = rtf_to_text(f.read())
         lines = content.split("\n")
-        for lineIdx, l in enumerate(lines):
-            openMatch      = laserFileOpenPat.match(l)
-            loopStartMatch = loopStartPat.match(l)
-            if openMatch:
-                laserFileName = openMatch.group(2)
-                laserFileLastOpen = laserFileName
-                if laserFileName not in parseResult:
-                    parseResult[laserFileName] = {
-                        "open": [],
-                        "loop": [],
-                        "loopIntervalUpdated": {},
-                        "loopIntervalCounter": Counter(),
-                        "workpieceCount": 0
-                    }
-                    loopLastTime = None
-                parseResult[laserFileName]["open"].append(( lineIdx, openMatch.group(1) ))
 
-            if loopStartMatch:
-                timeStamp = loopStartMatch.group(1)
-                timeLoop  = datetime.datetime.strptime(f"{now.year}/{timeStamp}", "%Y/%m/%d %H:%M:%S")
-                if not loopLastTime:
-                    loopInterval = 0
-                else:
-                    loopInterval = (timeLoop - loopLastTime).total_seconds()
+    for lineIdx, l in enumerate(lines):
+        openMatch      = laserFileOpenPat.match(l)
+        loopStartMatch = loopStartPat.match(l)
+        if openMatch:
+            laserFileName = openMatch.group(2)
+            laserFileLastOpen = laserFileName
+            if laserFileName not in parseResult:
+                parseResult[laserFileName] = {
+                    "open": [],
+                    "loop": [],
+                    "loopIntervalUpdated": {},
+                    "loopIntervalCounter": Counter(),
+                    "workpieceCount": 0
+                }
+                loopLastTime = None
+            parseResult[laserFileName]["open"].append(( lineIdx, openMatch.group(1) ))
 
-                loopLastTime = timeLoop
+        if loopStartMatch:
+            timeStamp = loopStartMatch.group(1)
+            timeLoop  = datetime.datetime.strptime(f"{now.year}/{timeStamp}", "%Y/%m/%d %H:%M:%S")
+            if not loopLastTime:
+                loopInterval = 0
+            else:
+                loopInterval = (timeLoop - loopLastTime).total_seconds()
 
-                parseResult[laserFileLastOpen]["loop"].append(( lineIdx, timeStamp, loopInterval))
-                parseResult[laserFileLastOpen]["loopIntervalUpdated"][f"{loopInterval}"] = loopLastTime
-                parseResult[laserFileLastOpen]["loopIntervalCounter"][f"{loopInterval}"] += 1
-                if parseResult[laserFileLastOpen]["workpieceCount"] == 0:
-                    parseResult[laserFileLastOpen]["workpieceCount"] = loopStartMatch.group(2)
+            loopLastTime = timeLoop
+
+            parseResult[laserFileLastOpen]["loop"].append(( lineIdx, timeStamp, loopInterval))
+            parseResult[laserFileLastOpen]["loopIntervalUpdated"][f"{loopInterval}"] = loopLastTime
+            parseResult[laserFileLastOpen]["loopIntervalCounter"][f"{loopInterval}"] += 1
+            # Get maximun workpiece count
+            if int(loopStartMatch.group(2)) > parseResult[laserFileLastOpen]["workpieceCount"]:
+                parseResult[laserFileLastOpen]["workpieceCount"] = int(loopStartMatch.group(2))
+
     if not parseResult:
         if saveChk:
             util.saveWorkbook(wb)

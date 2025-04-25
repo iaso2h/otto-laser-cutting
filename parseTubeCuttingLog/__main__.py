@@ -34,6 +34,7 @@ if __name__ == "__main__":
     argParser.add_argument("-R", "--rtf",    action="store_true")
     args = argParser.parse_args()
     config.DEV_MODE = args.dev
+
     if args.legacy:
         print(f"[bold white]版本号: {config.VERSION}[bold white]")
         print(f"[bold white]最后更新: {config.LASTUPDATED}[bold white]\n\n")
