@@ -8,13 +8,14 @@ import chardet
 import os
 import re
 import datetime
-from typing import Optional
+from typing import Tuple, Optional
 from collections import Counter
 from pathlib import Path
 from striprtf.striprtf import rtf_to_text
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Protection
+from pprint import pprint
 
 
 def getWorkbook():
@@ -37,64 +38,7 @@ def getEncoding(filePath) -> str:
             return result["encoding"]
 
 
-def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workbook]:
-    parseResult = {}
-    laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
-    loopStartPat     = re.compile(r"^\((.+?)\)总零件数:(\d+), 当前零件序号:1$")
-    laserFileLastOpen = ""
-    loopLastTime = None
-    now = datetime.datetime.now()
-    with open(rtfFile, "r", encoding=getEncoding(str(rtfFile))) as f:
-        content = rtf_to_text(f.read())
-        lines = content.split("\n")
-
-    for lineIdx, l in enumerate(lines):
-        openMatch      = laserFileOpenPat.match(l)
-        loopStartMatch = loopStartPat.match(l)
-        if openMatch:
-            laserFileName = openMatch.group(2)
-            laserFileLastOpen = laserFileName
-            if laserFileName not in parseResult:
-                parseResult[laserFileName] = {
-                    "open": [],
-                    "loop": [],
-                    "loopIntervalUpdated": {},
-                    "loopIntervalCounter": Counter(),
-                    "workpieceCount": 0
-                }
-                loopLastTime = None
-            parseResult[laserFileName]["open"].append(( lineIdx, openMatch.group(1) ))
-
-        if loopStartMatch:
-            timeStamp = loopStartMatch.group(1)
-            timeLoop  = datetime.datetime.strptime(f"{now.year}/{timeStamp}", "%Y/%m/%d %H:%M:%S")
-            if not loopLastTime:
-                loopInterval = 0
-            else:
-                loopInterval = (timeLoop - loopLastTime).total_seconds()
-
-            loopLastTime = timeLoop
-
-            parseResult[laserFileLastOpen]["loop"].append(( lineIdx, timeStamp, loopInterval))
-            parseResult[laserFileLastOpen]["loopIntervalUpdated"][f"{loopInterval}"] = loopLastTime
-            parseResult[laserFileLastOpen]["loopIntervalCounter"][f"{loopInterval}"] += 1
-            # Get maximun workpiece count
-            if int(loopStartMatch.group(2)) > parseResult[laserFileLastOpen]["workpieceCount"]:
-                parseResult[laserFileLastOpen]["workpieceCount"] = int(loopStartMatch.group(2))
-
-    if not parseResult:
-        if saveChk:
-            util.saveWorkbook(wb)
-        else:
-            return wb
-
-
-    if wb.active.title == "Sheet": # type: ignore
-        ws = wb.active # type: Worksheet
-        ws.title = rtfFile.stem
-    else:
-        ws = wb.create_sheet(rtfFile.stem, 0)
-
+def fillWorkbook(ws: Worksheet, parsedResult: dict, sortChk: bool):
     ws[f"A{1}"].value = "排样文件"
     ws.column_dimensions["A"].width = 35
     ws[f"B{1}"].value = "循环耗时"
@@ -117,7 +61,11 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
         ws.cell(row=1, column=col).style     = "Headline 1"
         ws.cell(row=1, column=col).alignment = style.alCenter
 
-    for laserFileName, laserFileInfo in parseResult.items():
+    if sortChk:
+        items = sorted(parsedResult.items())
+    else:
+        items = parsedResult.items()
+    for laserFileName, laserFileInfo in items:
         if len(laserFileInfo["loop"]) < 1:
             continue
 
@@ -132,7 +80,7 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
 
             if intervalIdx == len(mostCommon) - 1:
 
-                # Merge laser file Name cells
+                # Merge laser filename cells under column A
                 if interval == "0":
                     endRow = currentRow - 1
                 else:
@@ -188,38 +136,160 @@ def parse(rtfFile:Path, saveChk:bool, wb: Workbook=Workbook()) -> Optional[Workb
                 ws[f"I{currentRow}"].border = style.borderMedium
 
 
-    ws.protection.sheet = True
-    ws.protection.password = '456'
-    ws.protection.enable()
-    if saveChk:
-        util.saveWorkbook(wb)
+            ws.protection.sheet = True
+            ws.protection.password = '456'
+            ws.protection.enable()
+
+
+def parse(
+    rtfFile: Path,
+    wb: Workbook,
+    accumulationMode: bool,
+    parsedResult: Optional[dict] = None
+) -> dict:
+    """
+    Args:
+        parsedResult: If None, a new dictionary will be created.
+                      Provide a dict if you want to accumulate results.
+    """
+    laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
+    loopStartPat     = re.compile(r"^\((.+?)\)总零件数:(\d+), 当前零件序号:1$")
+    laserFileLastOpen = ""
+    loopLastTime = None
+    if parsedResult is None:
+        parsedResult = {}
+
+    now = datetime.datetime.now()
+    with open(rtfFile, "r", encoding=getEncoding(str(rtfFile))) as f:
+        content = rtf_to_text(f.read())
+        lines = content.split("\n")
+
+    laserFileFullPath = ""
+    for lineIdx, l in enumerate(lines):
+        openMatch      = laserFileOpenPat.match(l)
+        loopStartMatch = loopStartPat.match(l)
+        if openMatch:
+            laserFileFullPath = openMatch.group(2)
+            laserFileName = laserFileFullPath.replace("D:\\欧拓图纸\\切割文件\\", "")
+            laserFileName = util.diametartSymbolUnify(laserFileName)
+            laserFileName = laserFileName.replace(".zx", ".zzx")
+            laserFileName = laserFileName.replace("  ", " ")
+            laserFileName = laserFileName.strip()
+            laserFileLastOpen = laserFileName
+            if laserFileName not in parsedResult:
+                parsedResult[laserFileName] = {
+                    "open": [],
+                    "loop": [],
+                    "loopIntervalUpdated": {},
+                    "loopIntervalCounter": Counter(),
+                    "workpieceCount": 0
+                }
+                loopLastTime = None
+            parsedResult[laserFileName]["open"].append(( lineIdx, openMatch.group(1) ))
+
+        if loopStartMatch:
+            timeStamp = loopStartMatch.group(1)
+            timeLoop  = datetime.datetime.strptime(f"{now.year}/{timeStamp}", "%Y/%m/%d %H:%M:%S")
+            if not loopLastTime:
+                loopInterval = 0
+            else:
+                loopInterval = (timeLoop - loopLastTime).total_seconds()
+
+            # Add addiontional time window in accumulation mode
+            if accumulationMode:
+                if loopInterval:
+                    loopInterval += 15
+
+            loopLastTime = timeLoop
+
+            parsedResult[laserFileLastOpen]["loop"].append(( lineIdx, timeStamp, loopInterval))
+            parsedResult[laserFileLastOpen]["loopIntervalUpdated"][f"{loopInterval}"] = loopLastTime
+            parsedResult[laserFileLastOpen]["loopIntervalCounter"][f"{loopInterval}"] += 1
+            # Get maximun workpiece count
+            if int(loopStartMatch.group(2)) > parsedResult[laserFileLastOpen]["workpieceCount"]:
+                parsedResult[laserFileLastOpen]["workpieceCount"] = int(loopStartMatch.group(2))
+
+    if not parsedResult:
+        print(f"No laser file records parsed from rtf file {str(rtfFile)}")
+        return {
+            "workbook":     None,
+            "parsedResult": None
+        }
+
+
+    if accumulationMode:
+        return {
+                "workbook":     None,
+                "parsedResult": parsedResult
+                }
     else:
-        return wb
+        if wb.active.title == "Sheet": # type: ignore
+            ws = wb.active # type: Worksheet
+            ws.title = rtfFile.stem
+        else:
+            ws = wb.create_sheet(rtfFile.stem, 0)
+        fillWorkbook(ws, parsedResult, True)
+        return {
+                "workbook":     wb,
+                "parsedResult": parsedResult
+                }
 
 
 def parseAllLog():
     wb = Workbook()
     for f in Path(config.LASER_LOG_PATH).iterdir():
         if f.suffix == ".rtf":
-            wb = parse(f, False, wb) # type: ignore
+            wb = parse(
+                rtfFile=f,
+                wb=wb,
+                accumulationMode=False
+                    )["workbook"] # type: ignore
     util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
 
 
-def parseWeeklyLog():
-    if "ctrl" in keySet.keys:
+def parseAccuLog():
+    wb = Workbook()
+    parsedResult = None
+    now = datetime.datetime.now()
+    timeDeltaLiteral = 60
+    timeDelta = datetime.timedelta(days=timeDeltaLiteral)
+
+    for f in Path(config.LASER_LOG_PATH).iterdir():
+        if f.suffix == ".rtf":
+            logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
+            if now - logTime <= timeDelta:
+                parsedResult = parse(
+                    rtfFile=f,
+                    wb=wb,
+                    accumulationMode=True,
+                    parsedResult=parsedResult
+                        )["parsedResult"] # type: ignore
+    if not parsedResult:
+        return print("No parsed accumulated result")
+
+    fillWorkbook(wb.active, parsedResult, True) # type: ignore
+    wb.active.column_dimensions['F'].hidden = True #type: ignore
+    util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
+
+
+def parsePeriodLog():
+    if "ctrl" in keySet.keys and "shift" in keySet.keys and "alt" in keySet.keys:
+        return parseAccuLog()
+    elif "ctrl" in keySet.keys:
         return os.startfile(config.LASER_PROFILE_PATH)
-    if "shift" in keySet.keys:
+    elif "shift" in keySet.keys:
         timeDeltaLiteral = 7
     elif "alt" in keySet.keys:
         return parseAllLog()
     else:
         timeDeltaLiteral = 1
+    timeDeltaLiteral = 1
 
     wb = Workbook()
     now = datetime.datetime.now()
-    parsedCount = 0
+    parsedPeriodCount = 0
     for loopCount in range(3):
-        if parsedCount > 0:
+        if parsedPeriodCount > 0:
             break
         else:
             # Increase the time delta window to if no parsed files
@@ -230,10 +300,12 @@ def parseWeeklyLog():
             if f.suffix == ".rtf":
                 logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
                 if now - logTime <= timeDelta:
-                    wb = parse(f, False, wb) # type: ignore
-                    parsedCount += 1
+                    wb = parse(
+                        rtfFile=f,
+                        wb=wb,
+                        accumulationMode=False
+                        )["workbook"] # type: ignore
+                    parsedPeriodCount += 1
 
-    if not parsedCount:
-        print("No available .rtf log file to parse.")
-    else:
+    if parsedPeriodCount:
         util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore

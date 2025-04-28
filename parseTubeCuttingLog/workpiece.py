@@ -188,10 +188,7 @@ def exportDimensions():
             if workpieceDimension:
                 workpieceDimension = workpieceDimension.replace("_", "*")
                 workpieceDimension = workpieceDimension.replace("x", "*")
-                # workpieceDimension = workpieceDimension.replace("∅", "∅")
-                workpieceDimension = workpieceDimension.replace("Ø", "∅")
-                workpieceDimension = workpieceDimension.replace("Φ", "∅")
-                workpieceDimension = workpieceDimension.replace("φ", "∅")
+                workpieceDimension = util.diametartSymbolUnify(workpieceDimension)
                 workpieceDimension = workpieceDimension.strip()
 
             workpiece1stParameter = fileNameMatch.group(8)

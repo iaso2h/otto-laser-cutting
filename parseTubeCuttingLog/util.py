@@ -113,3 +113,11 @@ def getAllLaserFiles() -> List[Path]: # {{{
             laserFilePaths.append(p)
 
     return laserFilePaths # }}}
+
+def diametartSymbolUnify(input: str) -> str:
+    # input = input.replace("∅", "∅")
+    input = input.replace("Ø", "∅")
+    input = input.replace("Φ", "∅")
+    input = input.replace("φ", "∅")
+    return input
+

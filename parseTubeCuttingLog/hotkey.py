@@ -146,7 +146,7 @@ def onRelease(key):
     if keyName in keySet.keys:
         keySet.keys.remove(keyName)
 
-        # Reset keySet if necessary
+        # Force reset keySet if necessary
         if "ctrl" == keyName or "shift" == keyName or "alt" == keyName:
             if "ctrl" not in keySet.keys and "shift" not in keySet.keys and "alt" not in keySet.keys:
                 keySet.keys = set()
