@@ -127,7 +127,7 @@ def exportDimensions():
     ws.column_dimensions["H"].width = 9.5
     ws["I2"].value = "焊接散件"
     ws.column_dimensions["I"].width = 12
-    workpieceFullNames = []
+    workpieceFullNamesWithDimension = []
     workpieceNickNames = workpieceDict["nickname"]
     # <fullPartName>: ["<nickName>", "<comment>"]
     fileNamePat      = re.compile(config.RE_LASER_FILES_PAT)
@@ -168,11 +168,11 @@ def exportDimensions():
             ws[f"B{rowMax}"].value = workpieceNickName
             ws[f"B{rowMax}"].number_format = "@"
 
-            if workpieceFullName in workpieceFullNames:
+            if workpieceFullName in workpieceFullNamesWithDimension:
                 removeDummyLaserFile(p)
                 continue
             else:
-                workpieceFullNames.append(workpieceFullName)
+                workpieceFullNamesWithDimension.append(workpieceFullName)
         else:
             fileNameMatchTick = True
 
@@ -190,6 +190,8 @@ def exportDimensions():
                 workpieceDimension = workpieceDimension.replace("x", "*")
                 workpieceDimension = util.diametartSymbolUnify(workpieceDimension)
                 workpieceDimension = workpieceDimension.strip()
+            else:
+                workpieceDimension = ""
 
             workpiece1stParameter = fileNameMatch.group(8)
             workpiece2ndParameter = fileNameMatch.group(9) # Optional
@@ -199,11 +201,12 @@ def exportDimensions():
             workpieceLength = fileNameMatch.group(12)
 
             workpieceFullName = "{} {}".format(productId, workpieceName)
-            if workpieceFullName in workpieceFullNames:
+            workpieceFullNameWithDimension = "{} {}".format(workpieceFullName, workpieceDimension)
+            if workpieceFullNameWithDimension in workpieceFullNamesWithDimension:
                 removeDummyLaserFile(p)
                 continue
             else:
-                workpieceFullNames.append(workpieceFullName)
+                workpieceFullNamesWithDimension.append(workpieceFullNameWithDimension)
 
             tailingWorkpiece = fileNameMatch.group(14)        # Optional
             workpieceLongTubeLength = fileNameMatch.group(16) # Optional
