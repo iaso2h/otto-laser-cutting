@@ -8,6 +8,7 @@ import datetime
 import os
 import re
 import numpy
+import win32api
 from PIL import Image, ImageFilter, ImageGrab
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
@@ -107,6 +108,18 @@ def takeScreenshot() -> None: # {{{
 
     if os.getlogin() != "OT03":
         shutil.copy2(savePath, Path(config.SCREENSHOT_DIR_PATH, "开料记录.xlsx"))
+
+    win32api.MessageBox(
+                None,
+                f"记录成功",
+                "Info",
+                4096 + 64 + 0
+            )
+            #   MB_SYSTEMMODAL==4096
+            ##  Button Styles:
+            ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+            ##  To also change icon, add these values to previous number
+            ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
 # }}}
 
 def getImgInfo(p:Path) -> None: # {{{

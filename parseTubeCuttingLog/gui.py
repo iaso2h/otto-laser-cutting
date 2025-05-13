@@ -37,7 +37,7 @@ dpg.create_viewport(
         y_pos=geo["y_pos"],
         width=geo["width"],
         height=geo["height"],
-        always_on_top=True,
+        always_on_top=False,
         resizable=False,
     )
 
