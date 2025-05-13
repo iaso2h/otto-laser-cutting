@@ -1,8 +1,8 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.92"
-LASTUPDATED = "2025-05-12"
+VERSION     = "0.0.93"
+LASTUPDATED = "2025-05-13"
 
 import os
 import locale
@@ -14,7 +14,7 @@ SILENT_MODE = False
 DEV_MODE    = False
 PROGRAM_DIR = Path(os.getcwd())
 LOCAL_EXPORT_DIR = Path(PROGRAM_DIR, "export")
-RE_LASER_FILES_PAT = r"^(\d{3}[-a-zA-Z]{,3}(\(.+?\))?) (([^_]+? )?[^_]+?) ([^_]{,8})([_*x])?(([^\u4e00-\u9fff]+?).(([RT])?([0-9.]+?))[_*x]L([.0-9]{1,5}))?( \d+?支 \+ (.*?) \d+?支)?( L(\d{4}))?(_X\d{,2})?"
+RE_LASER_FILES_PAT = r"^(\d{3}[-a-zA-Z]{,3}(\(.+?\))?) (([^_]+? )?[^_]+?) ([^_]{,8})([_*x])?(([^\u4e00-\u9fff]+?)[_*x](([RT])?([0-9.]+?))?[_*x]?L([.0-9]{1,5}))?( \d+?支 \+ (.*?) \d+?支)?( L(\d{4}))?(_X\d{,2})?"
 TUBE_DIMENSION_PAT = r"(∅[0-9.]*?)(\*T.*?)?\*(L.*)"
 
 
