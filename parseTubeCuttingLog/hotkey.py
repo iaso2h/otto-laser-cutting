@@ -1,4 +1,5 @@
 import keySet
+import cutRecord
 
 from pynput import keyboard
 from pynput.mouse import Button, Controller
@@ -106,9 +107,9 @@ def coordinateEcho():
     # To also change icon, add these values to previous number
     # 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
 def onPress(key):
-    try:
+    if hasattr(key, "char"):
         keyName = key.char
-    except AttributeError:
+    else:
         keyName = key.name
     if not keyName:
         return
@@ -125,12 +126,14 @@ def onPress(key):
 
     if {"alt", "a"}.issubset(keySet.keys):
         hotkeyAlignTube()
+    elif {"alt", "j"}.issubset(keySet.keys):
+        cutRecord.takeScreenshot()
 
 
 def onRelease(key):
-    try:
+    if hasattr(key, "char"):
         keyName = key.char
-    except AttributeError:
+    else:
         keyName = key.name
     if not keyName:
         return
