@@ -341,5 +341,5 @@ def rtfSimplify():
         with open(targetPath, mode="w", encoding="utf-8") as f2:
             for line in refineLines:
                 f2.write(line)
-        print("完成精简: ", targetPath)
+        print("导出日志: ", targetPath)
 

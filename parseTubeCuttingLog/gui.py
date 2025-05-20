@@ -61,25 +61,25 @@ with dpg.window(
         dpg.add_text(f"最后更新: {config.LASTUPDATED}")
     dpg.add_separator(label="开料")
     with dpg.group(horizontal=True):
-        dpg.add_button(label="程序截图",     callback=cutRecord.takeScreenshot)
-        dpg.add_button(label="耗时分析",     callback=rtfParse.parsePeriodLog)
-        dpg.add_button(label="重新链接截图", callback=cutRecord.relinkScreenshots)
+        dpg.add_button(label="程序截图", callback=cutRecord.takeScreenshot)
+        dpg.add_button(label="耗时分析", callback=rtfParse.parsePeriodLog)
+        dpg.add_button(label="日志分析", callback=rtfParse.rtfSimplify)
     dpg.add_separator(label="排样文件")
     with dpg.group(horizontal=True):
         dpg.add_button(label="命名检查",     callback=workpiece.workpieceNamingVerification)
         dpg.add_button(label="工件规格总览", callback=workpiece.exportDimensions)
         dpg.add_button(label="删除冗余排样", callback=workpiece.removeRedundantLaserFile)
     dpg.add_input_text(
-            multiline=True,
-            default_value=console.logFlow,
-            tab_input=True,
-            tracked=False,
-            width=geo["width"] - 30,
-            height=155,
-            readonly=True,
-            tag="log",
-            no_horizontal_scroll=False,
-            )
+        multiline=True,
+        default_value=console.logFlow,
+        tab_input=True,
+        tracked=False,
+        width=geo["width"] - 30,
+        height=155,
+        readonly=True,
+        tag="log",
+        no_horizontal_scroll=False,
+    )
     def clearLog():
         console.logFlow = ""
         dpg.set_value("log", value=console.logFlow)

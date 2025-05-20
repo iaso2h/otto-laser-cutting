@@ -1,5 +1,6 @@
 import config
 logFlow = ""
+richTextPat = r"\[[_/ a-zA-z]+?\]"
 
 from rich.console import Console
 
@@ -17,6 +18,6 @@ def print(*args, **kwargs):
             logFlow = "\n".join(args) + "\n"
         else:
             logFlow = logFlow + "\n".join(args) + "\n"
-        logFlow = re.sub(r"\[[_/ a-zA-z]+?\]", "", logFlow)
+        logFlow = re.sub(richTextPat, "", logFlow)
         dpg.set_value("log", value=logFlow)
 

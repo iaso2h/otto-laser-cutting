@@ -53,6 +53,8 @@ def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
 def takeScreenshot() -> None: # {{{
     if "ctrl" in keySet.keys:
         return os.startfile(config.CUT_RECORD_PATH)
+    elif "shfit" in keySet.keys:
+        return relinkScreenshots()
     import win32gui
     import win32process
     import psutil
