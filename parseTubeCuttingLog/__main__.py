@@ -1,5 +1,6 @@
 import console
 import config
+import rtfParse
 config.updaPath()
 
 import hotkey
@@ -42,7 +43,6 @@ if __name__ == "__main__":
         cli.cliStart()
         input("Press enter to proceed...")
     elif args.rtf:
-        import rtfParse
         rtfParse.parseAllLog()
     else:
         config.GUI_MODE = True

@@ -17,6 +17,12 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Protection
 from pprint import pprint
 
+laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
+segmentFirstPat  = re.compile(r"^\((.+?)\)总零件数:(\d+), 当前零件序号:1$")
+segmentPat         = re.compile(r".*总零件数:(\d+), 当前零件序号:\d+$")
+scheduelTotalPat   = re.compile(r".*零件切割计划数目\d+.*$")
+scheduelLoopEndPat = re.compile(r".*已切割零件数目\d+.*$")
+loopStartPat       = re.compile(r".*开始加工, 循环计数：\d+.*$")
 
 def getWorkbook():
     if config.CUT_RECORD_PATH.exists():
@@ -152,8 +158,6 @@ def parse(
         parsedResult: If None, a new dictionary will be created.
                       Provide a dict if you want to accumulate results.
     """
-    laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
-    loopStartPat     = re.compile(r"^\((.+?)\)总零件数:(\d+), 当前零件序号:1$")
     laserFileLastOpen = ""
     loopLastTime = None
     if parsedResult is None:
@@ -167,7 +171,7 @@ def parse(
     laserFileFullPath = ""
     for lineIdx, l in enumerate(lines):
         openMatch      = laserFileOpenPat.match(l)
-        loopStartMatch = loopStartPat.match(l)
+        loopStartMatch = segmentFirstPat.match(l)
         if openMatch:
             laserFileFullPath = openMatch.group(2)
             laserFileName = laserFileFullPath.replace("D:\\欧拓图纸\\切割文件\\", "")
@@ -309,3 +313,33 @@ def parsePeriodLog():
 
     if parsedPeriodCount:
         util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
+
+
+def rtfSimplify():
+    for p in config.LASER_LOG_PATH.iterdir():
+        if p.suffix != ".rtf":
+            continue
+
+        with open(p, "r", encoding=getEncoding(str(p))) as f1:
+            content = rtf_to_text(f1.read())
+            lines = content.split("\n")
+        refineLines = []
+        for line in lines:
+            m1 = laserFileOpenPat.match(line)
+            m2 = segmentPat.match(line)
+            m3 = scheduelTotalPat.match(line)
+            m4 = scheduelLoopEndPat.match(line)
+            m5 = loopStartPat.match(line)
+            if not any((m1, m2, m3, m4, m5)):
+                continue
+            else:
+                refineLines.append(line + "\n")
+        targetPath = Path(
+            p.parent,
+            "精简" + p.stem + p.suffix
+        )
+        with open(targetPath, mode="w", encoding="utf-8") as f2:
+            for line in refineLines:
+                f2.write(line)
+        print("完成精简: ", targetPath)
+
