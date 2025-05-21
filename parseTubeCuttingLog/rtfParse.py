@@ -242,12 +242,14 @@ def parse(
 def parseAllLog():
     wb = Workbook()
     for f in Path(config.LASER_LOG_PATH).iterdir():
-        if f.suffix == ".rtf":
-            wb = parse(
-                rtfFile=f,
-                wb=wb,
-                accumulationMode=False
-                    )["workbook"] # type: ignore
+        if f.suffix != ".rtf" or "精简" in f.stem:
+            continue
+
+        wb = parse(
+            rtfFile=f,
+            wb=wb,
+            accumulationMode=False
+                )["workbook"] # type: ignore
     util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
 
 
@@ -259,15 +261,17 @@ def parseAccuLog():
     timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
     for f in Path(config.LASER_LOG_PATH).iterdir():
-        if f.suffix == ".rtf":
-            logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
-            if now - logTime <= timeDelta:
-                parsedResult = parse(
-                    rtfFile=f,
-                    wb=wb,
-                    accumulationMode=True,
-                    parsedResult=parsedResult
-                        )["parsedResult"] # type: ignore
+        if f.suffix != ".rtf" or "精简" in f.stem:
+            continue
+
+        logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
+        if now - logTime <= timeDelta:
+            parsedResult = parse(
+                rtfFile=f,
+                wb=wb,
+                accumulationMode=True,
+                parsedResult=parsedResult
+                    )["parsedResult"] # type: ignore
     if not parsedResult:
         return print("No parsed accumulated result")
 
@@ -301,15 +305,17 @@ def parsePeriodLog():
         timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
         for f in Path(config.LASER_LOG_PATH).iterdir():
-            if f.suffix == ".rtf":
-                logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
-                if now - logTime <= timeDelta:
-                    wb = parse(
-                        rtfFile=f,
-                        wb=wb,
-                        accumulationMode=False
-                        )["workbook"] # type: ignore
-                    parsedPeriodCount += 1
+            if f.suffix != ".rtf" or "精简" in f.stem:
+                continue
+
+            logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
+            if now - logTime <= timeDelta:
+                wb = parse(
+                    rtfFile=f,
+                    wb=wb,
+                    accumulationMode=False
+                    )["workbook"] # type: ignore
+                parsedPeriodCount += 1
 
     if parsedPeriodCount:
         util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
@@ -317,7 +323,7 @@ def parsePeriodLog():
 
 def rtfSimplify():
     for p in config.LASER_LOG_PATH.iterdir():
-        if p.suffix != ".rtf":
+        if p.suffix != ".rtf" or "精简" in p.stem:
             continue
 
         with open(p, "r", encoding=getEncoding(str(p))) as f1:
