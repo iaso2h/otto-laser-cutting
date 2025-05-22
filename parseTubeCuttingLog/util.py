@@ -1,16 +1,33 @@
 import config
+
 import console
 import os
 import shutil
 import datetime
 import win32api, win32con
 import re
+import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from openpyxl import Workbook
 from typing import List
 
 
 print = console.print
+# Logging set up
+handler = RotatingFileHandler(
+    config.MONITOR_LOG_PATH, # type: ignore
+    maxBytes=5 * 1024 * 1024,  # 5 MB
+    backupCount=3,
+    encoding="utf-8",
+)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(message)s")
+)
+
+monitorLogger = logging.getLogger("tubeProMonitor")
+monitorLogger.setLevel(logging.INFO)
+monitorLogger.addHandler(handler)
 
 
 def getTimeStamp() -> str:

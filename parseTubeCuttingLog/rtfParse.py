@@ -241,7 +241,7 @@ def parse(
 
 def parseAllLog():
     wb = Workbook()
-    for f in Path(config.LASER_LOG_PATH).iterdir():
+    for f in Path(config.TUBEPRO_LOG_PATH).iterdir():
         if f.suffix != ".rtf" or "精简" in f.stem:
             continue
 
@@ -260,7 +260,7 @@ def parseAccuLog():
     timeDeltaLiteral = 60
     timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
-    for f in Path(config.LASER_LOG_PATH).iterdir():
+    for f in Path(config.TUBEPRO_LOG_PATH).iterdir():
         if f.suffix != ".rtf" or "精简" in f.stem:
             continue
 
@@ -304,7 +304,7 @@ def parsePeriodLog():
             timeDeltaLiteral = timeDeltaLiteral * (7 ** loopCount)
         timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
-        for f in Path(config.LASER_LOG_PATH).iterdir():
+        for f in Path(config.TUBEPRO_LOG_PATH).iterdir():
             if f.suffix != ".rtf" or "精简" in f.stem:
                 continue
 
@@ -322,7 +322,7 @@ def parsePeriodLog():
 
 
 def rtfSimplify():
-    for p in config.LASER_LOG_PATH.iterdir():
+    for p in config.TUBEPRO_LOG_PATH.iterdir():
         if p.suffix != ".rtf" or "精简" in p.stem:
             continue
 

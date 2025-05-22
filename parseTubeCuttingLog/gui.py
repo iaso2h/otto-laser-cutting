@@ -5,6 +5,7 @@ import cutRecord
 import workpiece
 import util
 import rtfParse
+import tubeProMonitor
 
 import os
 import json
@@ -64,6 +65,8 @@ with dpg.window(
         dpg.add_button(label="程序截图", callback=cutRecord.takeScreenshot)
         dpg.add_button(label="耗时分析", callback=rtfParse.parsePeriodLog)
         dpg.add_button(label="日志分析", callback=rtfParse.rtfSimplify)
+        tubeProMonitor.monitor = tubeProMonitor.Monitor()
+        dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
     dpg.add_separator(label="排样文件")
     with dpg.group(horizontal=True):
         dpg.add_button(label="命名检查",     callback=workpiece.workpieceNamingVerification)

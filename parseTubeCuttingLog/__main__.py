@@ -1,7 +1,7 @@
 import console
 import config
-import rtfParse
 config.updaPath()
+import rtfParse
 
 import hotkey
 import gui
