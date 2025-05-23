@@ -73,11 +73,8 @@ with dpg.window(
     with dpg.group(horizontal=True):
         tubeProMonitor.monitor = tubeProMonitor.Monitor()
         tubeProMonitor.monitor.loadTemplates()
-        # dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
-        dpg.add_button(label="运行匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
-        dpg.add_button(label="暂停匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
-        dpg.add_button(label="报警匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
-        dpg.add_button(label="完成匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
+        dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
+        dpg.add_button(label="匹配检测", callback=tubeProMonitor.monitor.checkTemplateMatches)
     dpg.add_input_text(
         multiline=True,
         default_value=console.logFlow,
