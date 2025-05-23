@@ -3,7 +3,6 @@ import console
 import config
 import cutRecord
 import workpiece
-import util
 import rtfParse
 import tubeProMonitor
 
@@ -65,13 +64,20 @@ with dpg.window(
         dpg.add_button(label="程序截图", callback=cutRecord.takeScreenshot)
         dpg.add_button(label="耗时分析", callback=rtfParse.parsePeriodLog)
         dpg.add_button(label="日志分析", callback=rtfParse.rtfSimplify)
-        tubeProMonitor.monitor = tubeProMonitor.Monitor()
-        dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
     dpg.add_separator(label="排样文件")
     with dpg.group(horizontal=True):
         dpg.add_button(label="命名检查",     callback=workpiece.workpieceNamingVerification)
         dpg.add_button(label="工件规格总览", callback=workpiece.exportDimensions)
         dpg.add_button(label="删除冗余排样", callback=workpiece.removeRedundantLaserFile)
+    dpg.add_separator(label="开料实时检测")
+    with dpg.group(horizontal=True):
+        tubeProMonitor.monitor = tubeProMonitor.Monitor()
+        tubeProMonitor.monitor.loadTemplates()
+        # dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
+        dpg.add_button(label="运行匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
+        dpg.add_button(label="暂停匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
+        dpg.add_button(label="报警匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
+        dpg.add_button(label="完成匹配", callback=tubeProMonitor.monitor.toggleMonitoring)
     dpg.add_input_text(
         multiline=True,
         default_value=console.logFlow,

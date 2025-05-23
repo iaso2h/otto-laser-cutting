@@ -32,17 +32,17 @@ class Monitor:
         self.similarityThreshold = 0.9
         self.enabled = True
 
+
+    def loadTemplates(self):
         normalTemplatePath = Path(config.PIC_TEMPLATE, "runningNormal.png") # type: ignore
         if not normalTemplatePath.exists():
             self.enabled = False
-        else:
-            self.loadTemplate(str(normalTemplatePath))
+            return
 
-    def loadTemplate(self, templatePathStr: str):
         try:
-            self.template = cv2.imdecode(np.fromfile(templatePathStr, dtype=np.uint8), cv2.IMREAD_COLOR)
+            self.template = cv2.imdecode(np.fromfile(normalTemplatePath, dtype=np.uint8), cv2.IMREAD_COLOR)
             if self.template is None:
-                raise FileNotFoundError(f"Template image not found at {templatePathStr}")
+                raise FileNotFoundError(f"Template image not found at {normalTemplatePath}")
             self.templateHeight, self.templateWidth = self.template.shape[:2]
             return True
         except Exception as e:
@@ -69,7 +69,7 @@ class Monitor:
     def _monitor_loop(self):
         while self.isRunning:
             self.checkCount += 1
-            logger.info(f"Monitoring for the {self.checkCount} times...")
+            logger.info(f"\n\nMonitoring for the {self.checkCount} times...")
             # Find target window
             hwndTitle = {}
             def winEnumHandler(hwnd, ctx):
@@ -111,7 +111,7 @@ class Monitor:
             # Check for match
             currentTime = time.time()
             if maxVal < self.similarityThreshold:
-                print("Match failed.")
+                print(f"Match failed at similarity {maxVal}.")
                 self.alertShutdonwCount += 1
                 self.lastAlertTime = currentTime
                 if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdonwCount >= self.alertShutdonwThreshold:
