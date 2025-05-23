@@ -31,7 +31,7 @@ dpg.add_font_range(0x0001, 0x9FFF, parent=fontName)
 dpg.bind_font(fontName)
 
 dpg.create_viewport(
-        title="欧拓开料辅助",
+        title="ottoLaserCutting",
         decorated=False,
         x_pos=geo["x_pos"],
         y_pos=geo["y_pos"],
