@@ -32,7 +32,7 @@ dpg.add_font_range(0x0001, 0x9FFF, parent=fontName)
 dpg.bind_font(fontName)
 
 dpg.create_viewport(
-        title="TubePro Aid",
+        title="欧拓开料辅助",
         decorated=False,
         x_pos=geo["x_pos"],
         y_pos=geo["y_pos"],
@@ -45,7 +45,7 @@ dpg.create_viewport(
 dpg.setup_dearpygui()
 
 with dpg.window(
-        label="TubePro辅助 v" + config.VERSION,
+        label="欧拓开料辅助 v" + config.VERSION,
         autosize=False,
         no_resize=True,
         width=geo["width"],

@@ -1,4 +1,4 @@
-name: tubeProAid
+name: ottoLaserCutting
 channels:
   - conda-forge
   - defaults
