@@ -20,7 +20,7 @@ TUBE_DIMENSION_PAT = r"(∅[0-9.]*?)(\*T.*?)?\*(L.*)"
 
 
 PARENT_DIR_PATH = Path(r"D:\欧拓图纸")
-WAREHOUSING_PATH = Path(r"E:\Stock\外协")
+WAREHOUSING_PATH = Path(r"D:\Stock\外协")
 
 LASER_FILE_DIR_PATH: Optional[Path] = None
 DISPATCH_FILE_PATH: Optional[Path] = None
@@ -66,4 +66,4 @@ def updaPath():
     PRODUCT_ID_CATERGORY_CONVENTION_PATH = Path(PARENT_DIR_PATH, r"辅助程序/型号类别对照规则.json")
     GUI_GEOMETRY_PATH = Path(PARENT_DIR_PATH, r"辅助程序/程序几何.json")
     WORKPIECE_DICT = Path(PARENT_DIR_PATH, r"辅助程序/workpieceDict.json")
-    PIC_TEMPLATE = Path(PARENT_DIR_PATH, r"辅助程序/TubePro")
+    PIC_TEMPLATE = Path(PARENT_DIR_PATH, r"辅助程序/ottoLaserCutting")

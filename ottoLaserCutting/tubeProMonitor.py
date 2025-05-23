@@ -118,6 +118,7 @@ class Monitor:
                     self.isRunning = False
                     self.alertShutdonwCount = 0
                     print(f"Stop monitoring due to {self.alertShutdonwCount} times fail in {self.alertCooldown}s")
+                    return
                 # print(f"ALERT! Match found: {maxVal * 100:.2f}% similarity")
                 #
                 # # Visualize match (optional)
