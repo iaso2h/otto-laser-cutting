@@ -8,11 +8,9 @@ import win32gui, win32process, win32api, win32con
 import psutil
 import time
 import copy
-import console
 
 mouse = Controller()
 mouseInterval = 0.075
-# print = console.print
 
 
 def hotkeyAlignTube():

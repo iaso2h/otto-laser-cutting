@@ -111,7 +111,7 @@ def fillPartInfo(): # {{{
     wb = load_workbook(str(config.DISPATCH_FILE_PATH))
     laserFilePaths = util.getAllLaserFiles()
     if not laserFilePaths:
-        print(f"[red]No laser files found in: {str(config.LASER_FILE_DIR_PATH)}[/red]")
+        print(f"No laser files found in: {str(config.LASER_FILE_DIR_PATH)}")
         raise SystemExit(1)
 
 

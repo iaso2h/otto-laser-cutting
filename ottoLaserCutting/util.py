@@ -1,6 +1,5 @@
 import config
 
-import console
 import os
 import shutil
 import datetime
@@ -13,7 +12,6 @@ from openpyxl import Workbook
 from typing import List
 
 
-print = console.print
 # Logging set up
 handler = RotatingFileHandler(
     config.MONITOR_LOG_PATH, # type: ignore
@@ -51,7 +49,7 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
 
         try:
             wb.save(str(dstPath))
-            print(f"\n[{getTimeStamp()}]:[bold green]Saving Excel file at: [/bold green][bright_black]{dstPath}")
+            print(f"\n[{getTimeStamp()}]:Saving Excel file at: {dstPath}")
             if openAfterSaveChk:
                 os.startfile(dstPath)
             return dstPath
@@ -73,7 +71,7 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
                     config.LOCAL_EXPORT_DIR,
                     dstPath.stem + "_fallback_" + timeStr + ".xlsx")
                 wb.save(str(fallbackExcelPath))
-                print(f"\n[{getTimeStamp()}]:[bold green]Saving fallback Excel file at: [/bold green][bright_black]{fallbackExcelPath}")
+                print(f"\n[{getTimeStamp()}]:Saving fallback Excel file at: {fallbackExcelPath}")
                 return fallbackExcelPath
 
     else:
@@ -81,7 +79,7 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
             config.LOCAL_EXPORT_DIR,
             timeStr + ".xlsx")
         wb.save(str(newExcelPath))
-        print(f"\n[{getTimeStamp()}]:[bold green]Saving new Excel file at: [/bold green][bright_black]{newExcelPath}")
+        print(f"\n[{getTimeStamp()}]:Saving new Excel file at: {newExcelPath}")
         if openAfterSaveChk:
             os.startfile(newExcelPath)
         return newExcelPath

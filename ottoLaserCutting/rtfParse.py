@@ -1,6 +1,5 @@
 import util
 import config
-import console
 import style
 import keySet
 
@@ -29,7 +28,6 @@ def getWorkbook():
         return load_workbook(str(config.LASER_PORFILING_PATH))
     else:
         return Workbook()
-print = console.print
 
 
 def getEncoding(filePath) -> str:
