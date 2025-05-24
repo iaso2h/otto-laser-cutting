@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.101"
+VERSION     = "0.0.102"
 LASTUPDATED = "2025-05-24"
 DEV_MODE    = False
 
@@ -22,6 +22,9 @@ if getattr(sys, 'frozen', False):
 else:
     BUNDLE_PATH = os.path.dirname(os.path.abspath(__file__))
     EXECUTABLE_DIR = Path(BUNDLE_PATH).parent
+EXTERNAL_CONFIG = Path(EXECUTABLE_DIR, "configuration.json")
+if not EXTERNAL_CONFIG.exists():
+    raise FileExistsError(f"Can't find external configuration at: {str(EXTERNAL_CONFIG)}.")
 
 @dataclass
 class Geometry:
@@ -49,7 +52,7 @@ class Configuration:
 
 
 # Load JSON and convert to dataclass
-with open(Path(EXECUTABLE_DIR, "configuration.json"), "r", encoding="utf-8") as f:
+with open(EXTERNAL_CONFIG, "r", encoding="utf-8") as f:
     data = json.load(f)
     cfg = Configuration(
         geometry=Geometry(**data['geometry']),
