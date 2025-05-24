@@ -1,4 +1,4 @@
-import config
+from config import cfg
 import util
 
 import time
@@ -11,9 +11,9 @@ from PIL import ImageGrab
 import threading
 from pathlib import Path
 from typing import Optional
-from cv2.typing import MatLike
+# from cv2.typing import MatLike
 
-print = util.print
+PIC_TEMPLATE = Path(cfg.paths.otto, r"辅助程序/ottoLaserCutting/templates")
 logger = util.monitorLogger
 monitor = None
 
@@ -31,13 +31,20 @@ class Monitor:
         self.alertShutdonwCount = 0
         self.similarityThreshold = 0.9
         self.enabled = True
-        self.templateRunning:          Optional[MatLike] = None
-        self.templatePaused:           Optional[MatLike] = None
-        self.templateFinished01:       Optional[MatLike] = None
-        self.templateFinished02:       Optional[MatLike] = None
-        self.templateAlert:            Optional[MatLike] = None
-        self.templateAlertForceReturn: Optional[MatLike] = None
-        self.templateNoAlert:          Optional[MatLike] = None
+        self.templateRunning = None
+        self.templatePaused = None
+        self.templateFinished01 = None
+        self.templateFinished02 = None
+        self.templateAlert = None
+        self.templateAlertForceReturn = None
+        self.templateNoAlert = None
+        # self.templateRunning:          Optional[MatLike] = None
+        # self.templatePaused:           Optional[MatLike] = None
+        # self.templateFinished01:       Optional[MatLike] = None
+        # self.templateFinished02:       Optional[MatLike] = None
+        # self.templateAlert:            Optional[MatLike] = None
+        # self.templateAlertForceReturn: Optional[MatLike] = None
+        # self.templateNoAlert:          Optional[MatLike] = None
 
 
     def loadTemplates(self) -> None:
@@ -53,7 +60,7 @@ class Monitor:
             ("templateNoAlert",          "noAlert.png")
         ]
         for attrName, fileName in templates:
-            p = Path(config.PIC_TEMPLATE, fileName)  # type: ignore
+            p = Path(PIC_TEMPLATE, fileName)  # type: ignore
             if not p.exists():
                 print(f"Cannot find template: {p}")
                 self.enabled = False

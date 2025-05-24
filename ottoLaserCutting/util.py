@@ -1,4 +1,5 @@
 import config
+from config import cfg
 
 import os
 import shutil
@@ -11,10 +12,11 @@ from pathlib import Path
 from openpyxl import Workbook
 from typing import List
 
+MONITOR_LOG_PATH = Path(cfg.paths.otto, r"存档/切割机监视.log")
 
 # Logging set up
 handler = RotatingFileHandler(
-    config.MONITOR_LOG_PATH, # type: ignore
+    MONITOR_LOG_PATH, # type: ignore
     maxBytes=5 * 1024 * 1024,  # 5 MB
     backupCount=3,
     encoding="utf-8",
@@ -35,14 +37,15 @@ def getTimeStamp() -> str:
 
 
 def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=False) -> Path: # {{{
-    os.makedirs(config.LOCAL_EXPORT_DIR, exist_ok=True)
+    fallbackExportDir = Path(config.EXECUTABLE_DIR, "export")
     timeStr = str(datetime.datetime.now().strftime("%Y-%m-%d %H%M%S%f"))
+    os.makedirs(fallbackExportDir, exist_ok=True)
 
     if dstPath and (os.getlogin() == "OT03" or config.DEV_MODE):
         # Create backup first
         if dstPath.exists():
             backupPath = Path(
-                config.LOCAL_EXPORT_DIR,
+                fallbackExportDir,
                 dstPath.stem + "_backup_" + timeStr + ".xlsx"
             )
             shutil.copy2(dstPath, backupPath)
@@ -68,7 +71,7 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
                 return saveWorkbook(wb, dstPath, openAfterSaveChk)
             else:
                 fallbackExcelPath = Path(
-                    config.LOCAL_EXPORT_DIR,
+                    fallbackExportDir,
                     dstPath.stem + "_fallback_" + timeStr + ".xlsx")
                 wb.save(str(fallbackExcelPath))
                 print(f"\n[{getTimeStamp()}]:Saving fallback Excel file at: {fallbackExcelPath}")
@@ -76,7 +79,7 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
 
     else:
         newExcelPath = Path(
-            config.LOCAL_EXPORT_DIR,
+            fallbackExportDir,
             timeStr + ".xlsx")
         wb.save(str(newExcelPath))
         print(f"\n[{getTimeStamp()}]:Saving new Excel file at: {newExcelPath}")
