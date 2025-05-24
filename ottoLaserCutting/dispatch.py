@@ -1,4 +1,5 @@
 import config
+from config import cfg
 import util
 import console
 
@@ -12,12 +13,14 @@ from openpyxl.styles import Border, Side, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.cell_range import CellRange
 
+DISPATCH_FILE_PATH                   = Path(cfg.paths.otto, r"派工单（模板+空表）.xlsx")
+PRODUCT_ID_CATERGORY_CONVENTION_PATH = Path(cfg.paths.otto, r"辅助程序/型号类别对照规则.json")
 print = console.print
 # TODO: resolve when file path not found
 partColumnLetter = "E"
 partColumnNum = 5
 styleBorderThin = Side(border_style="thin", color="FF000000")
-with open(config.PRODUCT_ID_CATERGORY_CONVENTION_PATH, "r", encoding="utf-8") as pat:
+with open(PRODUCT_ID_CATERGORY_CONVENTION_PATH, "r", encoding="utf-8") as pat:
     productIdCatergoryConvention = json.load(pat)
 
 
@@ -108,10 +111,10 @@ def unmergeCellWithin(ws, rangeAllMerged, rangeTargetTop: str, rangeTargetBot: s
                 pass
 
 def fillPartInfo(): # {{{
-    wb = load_workbook(str(config.DISPATCH_FILE_PATH))
+    wb = load_workbook(str(DISPATCH_FILE_PATH))
     laserFilePaths = util.getAllLaserFiles()
     if not laserFilePaths:
-        print(f"[red]No laser files found in: {str(config.LASER_FILE_DIR_PATH)}[/red]")
+        print(f"No laser files found in: {str(config.LASER_FILE_DIR_PATH)}")
         raise SystemExit(1)
 
 
@@ -123,7 +126,7 @@ def fillPartInfo(): # {{{
     for _, p in enumerate(laserFilePaths):
         # https://regex101.com
         fileNameMatch = re.match(
-                config.RE_LASER_FILES_PAT,
+                cfg.patterns.laserFile,
                 str(p.stem)
                 )
         if not fileNameMatch:
@@ -216,11 +219,11 @@ def fillPartInfo(): # {{{
             ws[f"{partColumnLetter}{rowNew}"].value     = partFullName
             ws[f"{partColumnLetter}{rowNew}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    util.saveWorkbook(wb, config.DISPATCH_FILE_PATH) # }}}
+    util.saveWorkbook(wb, DISPATCH_FILE_PATH) # }}}
 
 
 def beautifyCells(): # {{{
-    wb = load_workbook(str(config.DISPATCH_FILE_PATH))
+    wb = load_workbook(str(DISPATCH_FILE_PATH))
     ws = wb.active
     rowMax = ws.max_row
     colMax = ws.max_column
@@ -298,4 +301,4 @@ def beautifyCells(): # {{{
     fullRange = "A3:" + get_column_letter(ws.max_column)  + str(ws.max_row)
     ws.auto_filter.ref = fullRange
 
-    util.saveWorkbook(wb, config.DISPATCH_FILE_PATH) # }}}
+    util.saveWorkbook(wb, DISPATCH_FILE_PATH) # }}}

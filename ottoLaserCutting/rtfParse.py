@@ -1,7 +1,6 @@
 import util
 import config
-import console
-import style
+from config import cfg
 import keySet
 
 import chardet
@@ -17,20 +16,14 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Protection
 from pprint import pprint
 
+LASER_PROFILE_PATH = Path(cfg.paths.otto, r"存档/耗时计算.xlsx")
+TUBEPRO_LOG_PATH   = Path(cfg.paths.otto, r"存档/切割机日志")
 laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
 segmentFirstPat  = re.compile(r"^\((.+?)\)总零件数:(\d+), 当前零件序号:1$")
 segmentPat         = re.compile(r".*总零件数:(\d+), 当前零件序号:\d+$")
 scheduelTotalPat   = re.compile(r".*零件切割计划数目\d+.*$")
 scheduelLoopEndPat = re.compile(r".*已切割零件数目\d+.*$")
 loopStartPat       = re.compile(r".*开始加工, 循环计数：\d+.*$")
-
-def getWorkbook():
-    if config.CUT_RECORD_PATH.exists():
-        return load_workbook(str(config.LASER_PORFILING_PATH))
-    else:
-        return Workbook()
-print = console.print
-
 
 def getEncoding(filePath) -> str:
     # Create a magic object
@@ -241,7 +234,7 @@ def parse(
 
 def parseAllLog():
     wb = Workbook()
-    for f in Path(config.TUBEPRO_LOG_PATH).iterdir():
+    for f in Path(TUBEPRO_LOG_PATH).iterdir():
         if f.suffix != ".rtf" or "精简" in f.stem:
             continue
 
@@ -250,7 +243,7 @@ def parseAllLog():
             wb=wb,
             accumulationMode=False
                 )["workbook"] # type: ignore
-    util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
+    util.saveWorkbook(wb, LASER_PROFILE_PATH, True) # type: ignore
 
 
 def parseAccuLog():
@@ -260,7 +253,7 @@ def parseAccuLog():
     timeDeltaLiteral = 60
     timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
-    for f in Path(config.TUBEPRO_LOG_PATH).iterdir():
+    for f in Path(TUBEPRO_LOG_PATH).iterdir():
         if f.suffix != ".rtf" or "精简" in f.stem:
             continue
 
@@ -277,14 +270,14 @@ def parseAccuLog():
 
     fillWorkbook(wb.active, parsedResult, True) # type: ignore
     wb.active.column_dimensions['F'].hidden = True #type: ignore
-    util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
+    util.saveWorkbook(wb, LASER_PROFILE_PATH, True) # type: ignore
 
 
 def parsePeriodLog():
     if "ctrl" in keySet.keys and "shift" in keySet.keys and "alt" in keySet.keys:
         return parseAccuLog()
     elif "ctrl" in keySet.keys:
-        return os.startfile(config.LASER_PROFILE_PATH)
+        return os.startfile(LASER_PROFILE_PATH)
     elif "shift" in keySet.keys:
         timeDeltaLiteral = 7
     elif "alt" in keySet.keys:
@@ -304,7 +297,7 @@ def parsePeriodLog():
             timeDeltaLiteral = timeDeltaLiteral * (7 ** loopCount)
         timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
-        for f in Path(config.TUBEPRO_LOG_PATH).iterdir():
+        for f in Path(TUBEPRO_LOG_PATH).iterdir():
             if f.suffix != ".rtf" or "精简" in f.stem:
                 continue
 
@@ -318,11 +311,11 @@ def parsePeriodLog():
                 parsedPeriodCount += 1
 
     if parsedPeriodCount:
-        util.saveWorkbook(wb, config.LASER_PROFILE_PATH, True) # type: ignore
+        util.saveWorkbook(wb, LASER_PROFILE_PATH, True) # type: ignore
 
 
 def rtfSimplify():
-    for p in config.TUBEPRO_LOG_PATH.iterdir():
+    for p in TUBEPRO_LOG_PATH.iterdir():
         if p.suffix != ".rtf" or "精简" in p.stem:
             continue
 

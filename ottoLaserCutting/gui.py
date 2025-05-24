@@ -1,42 +1,31 @@
 import subprocess
 import console
 import config
+from config import cfg
 import cutRecord
 import workpiece
 import rtfParse
 import tubeProMonitor
 
 import os
-import json
 import dearpygui.dearpygui as dpg
 import win32api, win32con
 from datetime import datetime, timedelta
 from pprint import pprint
 
-if win32api.GetSystemMetrics(0) < win32api.GetSystemMetrics(1) and config.GUI_GEOMETRY_PATH.exists():
-    with open(config.GUI_GEOMETRY_PATH, "r", encoding="utf-8") as f:
-        geo = json.load(f)
-else:
-    geo = {
-            "x_pos": 800,
-            "y_pos": 600,
-            "width": 290,
-            "height": 192,
-            "fontSize": 16
-    }
 dpg.create_context()
 reg = dpg.add_font_registry()
-fontName = dpg.add_font(file=r"C:\Windows\Fonts\msyh.ttc", size=geo["fontSize"], parent=reg)
+fontName = dpg.add_font(file=r"C:\Windows\Fonts\msyh.ttc", size=cfg.fontSize, parent=reg)
 dpg.add_font_range(0x0001, 0x9FFF, parent=fontName)
 dpg.bind_font(fontName)
 
 dpg.create_viewport(
         title="ottoLaserCutting",
         decorated=False,
-        x_pos=geo["x_pos"],
-        y_pos=geo["y_pos"],
-        width=geo["width"],
-        height=geo["height"],
+        x_pos=cfg.geometry.xPos,
+        y_pos=cfg.geometry.yPos,
+        width=cfg.geometry.width,
+        height=cfg.geometry.height,
         always_on_top=False,
         resizable=False,
     )
@@ -47,7 +36,7 @@ with dpg.window(
         label="欧拓开料辅助 v" + config.VERSION,
         autosize=False,
         no_resize=True,
-        width=geo["width"],
+        width=cfg.geometry.width,
         no_close=True,
         no_title_bar=False,
         no_move=True,
@@ -57,7 +46,7 @@ with dpg.window(
     with dpg.group(horizontal=True, horizontal_spacing=60):
         dpg.add_text(f"编程: 阮焕")
         with dpg.tooltip(dpg.last_item()):
-            dpg.add_text(f"OS User Name: {loginName}\nDev Mode: {config.DEV_MODE}\nSilent Mode: {config.SILENT_MODE}")
+            dpg.add_text(f"OS User Name: {loginName}\nDev Mode: {config.DEV_MODE}")
         dpg.add_text(f"最后更新: {config.LASTUPDATED}")
     dpg.add_separator(label="开料")
     with dpg.group(horizontal=True):
@@ -80,7 +69,7 @@ with dpg.window(
         default_value=console.logFlow,
         tab_input=True,
         tracked=False,
-        width=geo["width"] - 30,
+        width=cfg.geometry.width - 30,
         height=155,
         readonly=True,
         tag="log",
