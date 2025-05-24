@@ -23,7 +23,7 @@ class Monitor:
         self.templateHeight = 0
         self.templateWidth = 0
         self.lastAlertTime = 0
-        self.checkInterval = 3
+        self.checkInterval = 5
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
@@ -132,7 +132,7 @@ class Monitor:
             #     continue
 
             # Capture window content from TubePro
-            screenshot = captureWindow(tubeProHWND)
+            screenshot = captureWindow(-1)
             if screenshot is None:
                 logger.info(f"Caputre image failed")
                 continue
