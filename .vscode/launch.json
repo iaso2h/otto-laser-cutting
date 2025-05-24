@@ -8,7 +8,8 @@
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
-            "program": "parseTubeCuttingLog",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolderBasename}",
             "console": "integratedTerminal",
         }
     ]

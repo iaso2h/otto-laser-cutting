@@ -2,11 +2,11 @@ import console
 import config
 config.updaPath()
 import rtfParse
-
 import hotkey
 import gui
 
 import argparse
+import sys
 
 if not config.PARENT_DIR_PATH.exists():
     import os

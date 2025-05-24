@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.97"
+VERSION     = "0.0.98"
 LASTUPDATED = "2025-05-24"
 
 import os
@@ -66,4 +66,4 @@ def updaPath():
     PRODUCT_ID_CATERGORY_CONVENTION_PATH = Path(PARENT_DIR_PATH, r"辅助程序/型号类别对照规则.json")
     GUI_GEOMETRY_PATH = Path(PARENT_DIR_PATH, r"辅助程序/程序几何.json")
     WORKPIECE_DICT = Path(PARENT_DIR_PATH, r"辅助程序/workpieceDict.json")
-    PIC_TEMPLATE = Path(PARENT_DIR_PATH, r"辅助程序/ottoLaserCutting")
+    PIC_TEMPLATE = Path(PARENT_DIR_PATH, r"辅助程序/ottoLaserCutting/templates")
