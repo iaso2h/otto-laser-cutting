@@ -1,6 +1,8 @@
 import util
 import console
 import config
+from config import cfg
+
 import keySet
 
 import shutil
@@ -14,10 +16,13 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from pathlib import Path
 
+SCREENSHOT_DIR_PATH = Path(cfg.paths.otto, r"存档/截图")
+CUT_RECORD_PATH     = Path(cfg.paths.otto, r"存档/开料记录.xlsx")
+LASER_OCR_FIX_PATH  = Path(cfg.paths.otto, r"辅助程序/激光名称OCR修复规则.json")
 
 def getWorkbook() -> None:
-    if config.CUT_RECORD_PATH.exists():
-        return load_workbook(str(config.CUT_RECORD_PATH))
+    if CUT_RECORD_PATH.exists():
+        return load_workbook(str(CUT_RECORD_PATH))
     else:
         return Workbook()
 
@@ -27,7 +32,7 @@ screenshotPaths = []
 def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
     yearMonthPrefix = []
     sheetNames = wb.sheetnames
-    for p in config.SCREENSHOT_DIR_PATH.iterdir():
+    for p in SCREENSHOT_DIR_PATH.iterdir():
         if p.suffix == ".png":
             with Image.open(p) as img:
                 width, height = img.size
@@ -52,7 +57,7 @@ def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
 
 def takeScreenshot() -> None: # {{{
     if "ctrl" in keySet.keys:
-        return os.startfile(config.CUT_RECORD_PATH)
+        return os.startfile(CUT_RECORD_PATH)
     elif "shfit" in keySet.keys:
         return relinkScreenshots()
     import win32gui
@@ -88,7 +93,7 @@ def takeScreenshot() -> None: # {{{
     datetimeNow = datetime.datetime.now()
     timeStamp = datetimeNow.strftime("%Y/%m/%d %H:%M:%S")
     screenshot = ImageGrab.grab()
-    screenshotPath = Path(config.SCREENSHOT_DIR_PATH, f'屏幕截图 {datetimeNow.strftime("%Y-%m-%d %H%M%S")}.png')
+    screenshotPath = Path(SCREENSHOT_DIR_PATH, f'屏幕截图 {datetimeNow.strftime("%Y-%m-%d %H%M%S")}.png')
     screenshot.save(screenshotPath)
 
     # Using OCR to get process count
@@ -106,10 +111,10 @@ def takeScreenshot() -> None: # {{{
         ws["F1"].value = "截图文件"
 
     newRecord(ws, screenshotPath, partFileName, timeStamp)
-    savePath = util.saveWorkbook(wb, config.CUT_RECORD_PATH)
+    savePath = util.saveWorkbook(wb, CUT_RECORD_PATH)
 
     if os.getlogin() != "OT03":
-        shutil.copy2(savePath, Path(config.SCREENSHOT_DIR_PATH, "开料记录.xlsx"))
+        shutil.copy2(savePath, PathSCREENSHOT_DIR_PATH, "开料记录.xlsx"))
 
     win32api.MessageBox(
                 None,
@@ -163,7 +168,7 @@ def getImgInfo(p:Path) -> None: # {{{
             if suffixMatch:
                 partFileName = partFileName[:suffixMatch.span()[1]]
             partFileName = partFileName.strip()
-            with open(config.LASER_OCR_FIX_PATH, "r", encoding="utf-8") as pat:
+            with open(LASER_OCR_FIX_PATH, "r", encoding="utf-8") as pat:
                 commonFix = json.load(pat)
             for key, val in commonFix.items():
                 pattern = re.compile(key, re.IGNORECASE)
@@ -272,12 +277,12 @@ def updateScreenshotRecords(): # {{{
             # Start in a new worksheet
             newRecord(ws, p)
 
-    util.saveWorkbook(wb, config.CUT_RECORD_PATH) # }}}
+    util.saveWorkbook(wb, CUT_RECORD_PATH) # }}}
 
 
 def relinkScreenshots():
     if "ctrl" in keySet.keys:
-        return os.startfile(config.CUT_RECORD_PATH)
+        return os.startfile(CUT_RECORD_PATH)
     # TODO: highlight invalid ones
     wb = getWorkbook()
     for ws in wb.worksheets:
@@ -297,4 +302,4 @@ def relinkScreenshots():
                 if screenshotPath.exists() and screenshotPath.suffix == ".png":
                     ws[f"F{cell.row}"].hyperlink = cell.value
 
-    util.saveWorkbook(wb, config.CUT_RECORD_PATH)
+    util.saveWorkbook(wb, CUT_RECORD_PATH)

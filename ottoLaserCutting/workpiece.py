@@ -4,6 +4,7 @@ import util
 import shutil
 import keySet
 import subprocess
+from config import cfg
 
 import re
 import os
@@ -18,7 +19,8 @@ from openpyxl.styles.numbers import BUILTIN_FORMATS
 # https://openpyxl.readthedocs.io/en/3.1.3/_modules/openpyxl/styles/numbers.html
 from decimal import Decimal
 
-
+WORKPIECE_INFO_PATH = Path(cfg.paths.otto, r"存档/零件规格总览.xlsx")
+WORKPIECE_DICT = Path(cfg.paths.otto, r"辅助程序/workpieceDict.json")
 print = console.print
 
 def bankRound(precision: float, digitLiteral: str) -> float:
@@ -43,7 +45,7 @@ def workpieceNamingVerification():
     for _, p in enumerate(laserFilePaths):
         if p.suffix == ".zx" or p.suffix == ".zzx":
             fileNameMatch = re.match(
-                    config.RE_LASER_FILES_PAT,
+                    cfg.patterns.laserFile,
                     str(p.stem)
                     )
             if not fileNameMatch:
@@ -97,12 +99,12 @@ def removeRedundantLaserFile() -> None:
 
 
 def exportDimensions():
-    dstPath1 = config.WORKPIECE_INFO_PATH
-    dstPath2 = Path(config.WAREHOUSING_PATH, "零件规格总览.xlsx")
+    dstPath1 = WORKPIECE_INFO_PATH
+    dstPath2 = Path(cfg.paths.warehousing, "零件规格总览.xlsx")
     if "ctrl" in keySet.keys:
         return os.startfile(dstPath1)
     laserFilePaths = util.getAllLaserFiles()
-    with open(config.WORKPIECE_DICT, "r", encoding="utf-8") as f:
+    with open(WORKPIECE_DICT, "r", encoding="utf-8") as f:
         workpieceDict = json.load(f)
 
     wb = Workbook()
@@ -130,8 +132,8 @@ def exportDimensions():
     workpieceFullNamesWithDimension = []
     workpieceNickNames = workpieceDict["nickname"]
     # <fullPartName>: ["<nickName>", "<comment>"]
-    fileNamePat      = re.compile(config.RE_LASER_FILES_PAT)
-    tubeDimensionPat = re.compile(config.TUBE_DIMENSION_PAT)
+    fileNamePat      = re.compile(cfg.patterns.laserFile)
+    tubeDimensionPat = re.compile(cfg.patterns.workpieceDimension)
     for lIdx, p in enumerate(laserFilePaths):
         if p.suffix == ".zx" or p.suffix == ".zzx":
             fileNameMatch = fileNamePat.match(str(p.stem))

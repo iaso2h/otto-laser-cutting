@@ -1,67 +1,66 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.100"
+VERSION     = "0.0.101"
 LASTUPDATED = "2025-05-24"
 
 import os
+import sys
 import locale
+import json
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Optional
 locale.setlocale(locale.LC_TIME, '')
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the PyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    BUNDLE_PATH = sys._MEIPASS # type:ignore
+else:
+    BUNDLE_PATH = os.path.dirname(os.path.abspath(__file__))
+EXECUTABLE_PATH = Path(sys.executable)
 SILENT_MODE = False
 DEV_MODE    = False
-PROGRAM_DIR = Path(os.getcwd())
-LOCAL_EXPORT_DIR = Path(PROGRAM_DIR, "export")
-RE_LASER_FILES_PAT = r"^(\d{3}[-a-zA-Z]{,3}(\(.+?\))?) (([^_]+? )?[^_]+?) ([^_]{,8})([_*x])?(([^\u4e00-\u9fff]+?)[_*x](([RT])?([0-9.]+?))?[_*x]?L([.0-9]{1,5}))?( \d+?支 \+ (.*?) \d+?支)?( L(\d{4}))?(_X\d{,2})?"
-TUBE_DIMENSION_PAT = r"(∅[0-9.]*?)(\*T.*?)?\*(L.*)"
+
+@dataclass
+class Geometry:
+    xPos: int
+    yPos: int
+    width: int
+    height: int
+
+@dataclass
+class Paths:
+    otto: str
+    warehousing: str
+
+@dataclass
+class Pats:
+    laserFile: str
+    workpieceDimension: str
+
+@dataclass
+class Configuration:
+    geometry: Geometry
+    fontSize: int
+    paths: Paths
+    patterns: Pats
 
 
-PARENT_DIR_PATH = Path(r"D:\欧拓图纸")
-WAREHOUSING_PATH = Path(r"D:\Stock\外协")
+# Load JSON and convert to dataclass
+with open(Path(EXECUTABLE_PATH.parent, "configuration.json"), "r", encoding="utf-8") as f:
+    data = json.load(f)
+    cfg = Configuration(
+        geometry=Geometry(**data['geometry']),
+        fontSize=data['fontSize'],
+        paths=Paths(**data['paths']),
+        patterns=Pats(**data['patterns'])
+    )
 
-LASER_FILE_DIR_PATH: Optional[Path] = None
-DISPATCH_FILE_PATH: Optional[Path] = None
-SCREENSHOT_DIR_PATH: Optional[Path] = None
-CUT_RECORD_PATH: Optional[Path] = None
-LASER_PORFILING_PATH: Optional[Path] = None
-TUBEPRO_LOG_PATH: Optional[Path] = None
-MONITOR_LOG_PATH: Optional[Path] = None
-LASER_PROFILE_PATH: Optional[Path] = None
-LASER_OCR_FIX_PATH: Optional[Path] = None
-PRODUCT_ID_CATERGORY_CONVENTION_PATH: Optional[Path] = None
-GUI_GEOMETRY_PATH: Optional[Path] = None
-WORKPIECE_DICT: Optional[Path] = None
-WORKPIECE_INFO_PATH: Optional[Path] = None
-PIC_TEMPLATE: Optional[Path] = None
 
-def updaPath():
-    global LASER_FILE_DIR_PATH
-    global DISPATCH_FILE_PATH
-    global SCREENSHOT_DIR_PATH
-    global CUT_RECORD_PATH
-    global LASER_PORFILING_PATH
-    global TUBEPRO_LOG_PATH
-    global MONITOR_LOG_PATH
-    global LASER_PROFILE_PATH
-    global LASER_OCR_FIX_PATH
-    global PRODUCT_ID_CATERGORY_CONVENTION_PATH
-    global GUI_GEOMETRY_PATH
-    global WORKPIECE_DICT
-    global WORKPIECE_INFO_PATH
-    global PIC_TEMPLATE
+if not Path(cfg.paths.otto).exists():
+    print('无法找到"欧拓图纸"文件夹')
+    sys.exit()
 
-    LASER_FILE_DIR_PATH  = Path(PARENT_DIR_PATH, r"切割文件")
-    DISPATCH_FILE_PATH   = Path(PARENT_DIR_PATH, r"派工单（模板+空表）.xlsx")
-    SCREENSHOT_DIR_PATH  = Path(PARENT_DIR_PATH, r"存档/截图")
-    CUT_RECORD_PATH      = Path(PARENT_DIR_PATH, r"存档/开料记录.xlsx")
-    LASER_PORFILING_PATH = Path(PARENT_DIR_PATH, r"存档/开料耗时.xlsx")
-    LASER_PROFILE_PATH   = Path(PARENT_DIR_PATH, r"存档/耗时计算.xlsx")
-    WORKPIECE_INFO_PATH  = Path(PARENT_DIR_PATH, r"存档/零件规格总览.xlsx")
-    TUBEPRO_LOG_PATH     = Path(PARENT_DIR_PATH, r"存档/切割机日志")
-    MONITOR_LOG_PATH     = Path(PARENT_DIR_PATH, r"存档/切割机监视.log")
-    LASER_OCR_FIX_PATH                   = Path(PARENT_DIR_PATH, r"辅助程序/激光名称OCR修复规则.json")
-    PRODUCT_ID_CATERGORY_CONVENTION_PATH = Path(PARENT_DIR_PATH, r"辅助程序/型号类别对照规则.json")
-    GUI_GEOMETRY_PATH = Path(PARENT_DIR_PATH, r"辅助程序/程序几何.json")
-    WORKPIECE_DICT = Path(PARENT_DIR_PATH, r"辅助程序/workpieceDict.json")
-    PIC_TEMPLATE = Path(PARENT_DIR_PATH, r"辅助程序/ottoLaserCutting/templates")
+LASER_FILE_DIR_PATH  = Path(cfg.paths.otto, r"切割文件")
