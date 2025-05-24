@@ -1,22 +1,35 @@
-from ottoLaserCutting.config import cfg
+import sys
+from pathlib import Path
+sys.path.append(str(
+    Path(
+        Path(__file__).parent,
+        "ottoLaserCutting"
+        )
+    )
+)
+
+from ottoLaserCutting.config import cfg, EXTERNAL_CONFIG
+from ottoLaserCutting import tubeProMonitor
 
 import shutil
 import PyInstaller.__main__
-from pathlib import Path
-EXECUTABLE_PATH = Path(cfg.paths.otto, r"辅助程序/ottoLaserCutting")
+
+EXPORT_EXECUTABLE_PATH = Path(cfg.paths.otto, r"辅助程序/OttoLaserCutting")
 PyInstaller.__main__.run(
     [
         "ottoLaserCutting.spec",
-        "--distpath=" + str(EXECUTABLE_PATH),
+        "--distpath=" + str(EXPORT_EXECUTABLE_PATH),
         "--noconfirm",
         "--clean",
     ]
 )
 
+# Ship external resource along with the bundle executable
 shutil.copy2(
-    EXECUTABLE_PATH,
+    EXTERNAL_CONFIG,
     Path(
-        EXECUTABLE_PATH.parent,
-        EXECUTABLE_PATH.stem + "Template" + EXECUTABLE_PATH.suffix
+        EXPORT_EXECUTABLE_PATH.parent,
+        EXPORT_EXECUTABLE_PATH.stem + "Template" + EXPORT_EXECUTABLE_PATH.suffix
     )
 )
+

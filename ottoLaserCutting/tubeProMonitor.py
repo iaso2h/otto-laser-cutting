@@ -1,8 +1,13 @@
+import config
 from config import cfg
 import util
+import cutRecord
+import hotkey
 
 import time
+from typing import Optional
 import cv2
+# from cv2.typing import MatLike
 import numpy as np
 import win32gui
 import win32process
@@ -10,10 +15,9 @@ import psutil
 from PIL import ImageGrab
 import threading
 from pathlib import Path
-from typing import Optional
-# from cv2.typing import MatLike
+import copy
 
-PIC_TEMPLATE = Path(cfg.paths.otto, r"辅助程序/ottoLaserCutting/templates")
+PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
 logger = util.monitorLogger
 monitor = None
 
@@ -23,12 +27,12 @@ class Monitor:
         self.templateHeight = 0
         self.templateWidth = 0
         self.lastAlertTime = 0
-        self.checkInterval = 5
+        self.checkInterval = 3
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
         self.alertShutdonwThreshold = 3
-        self.alertShutdonwCount = 0
+        self.alertShutdownCount = 0
         self.similarityThreshold = 0.9
         self.enabled = True
         self.templateRunning = None
@@ -60,7 +64,7 @@ class Monitor:
             ("templateNoAlert",          "noAlert.png")
         ]
         for attrName, fileName in templates:
-            p = Path(PIC_TEMPLATE, fileName)  # type: ignore
+            p = Path(PIC_TEMPLATE, fileName)
             if not p.exists():
                 print(f"Cannot find template: {p}")
                 self.enabled = False
@@ -118,25 +122,54 @@ class Monitor:
 
 
     def _monitor_loop(self):
+        cursorPosLast = None
+        cursorPosCurrent = None
+        cursorIdleCount = 0
         while self.isRunning:
             time.sleep(self.checkInterval)
+            currentTime = time.time()
             self.checkCount += 1
 
             logger.info(f"\n\nMonitoring for the {self.checkCount} times...")
+
+            hwndTitles = {}
+            def winEnumHandler(hwnd, ctx):
+                if win32gui.IsWindowVisible(hwnd):
+                    windowText = win32gui.GetWindowText(hwnd)
+                    if windowText:
+                        hwndTitles[hwnd] = windowText
+                return True
+            win32gui.EnumWindows(winEnumHandler, None)
 
             foregroundHWND = win32gui.GetForegroundWindow()
             foregroundProcessId = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             foregroundProcessName = psutil.Process(foregroundProcessId).name()
             if foregroundProcessName != "TubePro.exe":
                 logger.info(f"TubePro isn't the foreground window.")
+                cursorPosCurrent = hotkey.mouse.position
+
+                if cursorPosLast:
+                    if cursorPosCurrent == cursorPosLast:
+                        cursorIdleCount =+ 1
+
+                    # Set to foreground if TubePro is actually running and being idle for over 1 minutes
+                    if cursorIdleCount >= 60 // self.checkInterval:
+                        for hwnd, title in hwndTitles.items():
+                            if title.startswith("TubePro"):
+                                _, pId = win32process.GetWindowThreadProcessId(hwnd)
+                                pName = psutil.Process(pId).name()
+                                if pName == "TubePro.exe":
+                                    win32gui.ShowWindow(hwnd, 5)
+                                    win32gui.SetForegroundWindow(hwnd)
+                                    logger.info(f"TubePro has been idle for too long and now it's being brought to the foreground window")
+                                    break
+
+                        cursorIdleCount = 0 # reset
+
+                cursorPosLast = cursorPosCurrent
                 continue
             else:
                 tubeProHWND = foregroundHWND
-            # Find TubePro window
-            # tubeProHWND = self.getTubeProHWND()
-            # if tubeProHWND == -1:
-            #     logger.info(f"Tubepro not found. Retry in {self.programNotFoundRetry}s")
-            #     continue
 
             # Capture window content from TubePro
             screenshot = captureWindow(-1)
@@ -149,37 +182,69 @@ class Monitor:
 
             # Compare with templates
             for name, attrName in (
-                ("running",          "templateRunning"),
                 ("paused",           "templatePaused"),
                 ("finished01",       "templateFinished01"),
-                ("finished02",       "templateFinished02"),
                 ("alert",            "templateAlert"),
-                ("alertForceReturn", "templateAlertForceReturn"),
                 ("noAlert",          "templateNoAlert"),
             ):
                 template = getattr(self, attrName)
                 matchResult = cv2.matchTemplate(screenshotCV, template, cv2.TM_CCOEFF_NORMED)
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
-                    logger.info(f"→{name}: {maxVal}]←")
-                else:
-                    logger.info(f"{name}: {maxVal}")
-            currentTime = time.time()
+                    logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
+                    if name == "finished01":
+                        cutRecord.takeScreenshot()
+                        logger.info("Cutting session is completed, stop monitoring.")
+                        self.isRunning = False
+                        return
+                    elif name == "paused":
+                        self.alertShutdownCount += 1
+                        self.lastAlertTime = currentTime
+                        if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdownCount >= self.alertShutdonwThreshold:
+                            print(f"Stop monitoring due to {self.alertShutdownCount} times fail in {self.alertCooldown}s")
+                            self.isRunning = False
+                            self.alertShutdownCount = 0
+                            return
+                        else:
+                            print(f"Cutting is paused, auto-click continue.")
+                            savedPosition = copy.copy(hotkey.mouse.position)
+                            hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
+                            hotkey.mouse.press(hotkey.Button.left)
+                            hotkey.mouse.release(hotkey.Button.left)
+                            hotkey.mouse.position = savedPosition
+                    elif name == "alert":
+                        matchResultAlertForceReturn = cv2.matchTemplate(
+                            screenshotCV,
+                            self.templateAlertForceReturn,
+                            cv2.TM_CCOEFF_NORMED
+                        )
+                        _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(matchResultAlertForceReturn)
+                        if maxValAlertForceReturn >= self.similarityThreshold:
+                            # TODO: cut down the tube
+                            logger.info("Force return is detected, stop monitoring.")
+                            self.isRunning = False
+                        else:
+                            logger.info("Alert is detected, stop monitoring.")
+                            self.isRunning = False
+                            return
+                    elif name == "noAlert":
+                        matchResultRunning = cv2.matchTemplate(
+                            screenshotCV,
+                            self.templateAlertForceReturn,
+                            cv2.TM_CCOEFF_NORMED
+                        )
+                        _, maxValAlertRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
+                        if maxValAlertRunning >= self.similarityThreshold and self.alertShutdonwCount and (
+                            currentTime - self.lastAlertTime >= self.alertCooldown
+                        ):
+                            self.alertShutdonwCount = 0
+                            logger.info("Clear alert count reseted. Back to the track")
 
-            # if maxVal < self.similarityThreshold:
+        # if maxVal < self.similarityThreshold:
             #     print(f"Match failed at similarity {maxVal}.")
-            #     self.alertShutdonwCount += 1
-            #     self.lastAlertTime = currentTime
-            #     if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdonwCount >= self.alertShutdonwThreshold:
-            #         self.isRunning = False
-            #         self.alertShutdonwCount = 0
-            #         print(f"Stop monitoring due to {self.alertShutdonwCount} times fail in {self.alertCooldown}s")
-            #         return
-            #     # print(f"ALERT! Match found: {maxVal * 100:.2f}% similarity")
             # else:
             #     print("Match succeeded.")
-            #     if (currentTime - self.lastAlertTime >= self.alertCooldown):
-            #         self.alertShutdonwCount = 0
+            #     if :
             #     logger.info("Everything is fine")
 
 

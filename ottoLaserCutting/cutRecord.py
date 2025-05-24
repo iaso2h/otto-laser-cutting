@@ -1,6 +1,5 @@
 import util
 import console
-import config
 from config import cfg
 
 import keySet
@@ -64,18 +63,18 @@ def takeScreenshot() -> None: # {{{
     import win32process
     import psutil
 
-    hwndTitle = {}
+    hwndTitles = {}
     def winEnumHandler(hwnd, ctx):
         if win32gui.IsWindowVisible(hwnd):
             windowText = win32gui.GetWindowText(hwnd)
             if windowText:
-                hwndTitle[hwnd] = windowText
+                hwndTitles[hwnd] = windowText
         return True
 
     win32gui.EnumWindows(winEnumHandler, None)
 
     partFileName = ""
-    for hwnd, title in hwndTitle.items():
+    for hwnd, title in hwndTitles.items():
         if title.startswith("TubePro"):
             _, pId = win32process.GetWindowThreadProcessId(hwnd)
             pName = psutil.Process(pId).name()
@@ -87,7 +86,7 @@ def takeScreenshot() -> None: # {{{
                 break
 
     if not partFileName:
-        return print("TubePro isn't running")
+        return print("Screenshot taking is abort due to TubePro is not running.")
 
     # Check current forground program
     datetimeNow = datetime.datetime.now()
