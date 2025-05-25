@@ -18,11 +18,13 @@ if getattr(sys, 'frozen', False):
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
     BUNDLE_PATH = sys._MEIPASS # type:ignore
+    EXECUTABLE_DIR = Path(sys.executable).parent
 else:
     BUNDLE_PATH = os.path.dirname(os.path.abspath(__file__))
-EXECUTABLE_PATH = Path(sys.executable)
-SILENT_MODE = False
-DEV_MODE    = False
+    EXECUTABLE_DIR = Path(BUNDLE_PATH).parent
+EXTERNAL_CONFIG = Path(EXECUTABLE_DIR, "configuration.json")
+if not EXTERNAL_CONFIG.exists():
+    raise FileExistsError(f"Can't find external configuration at: {str(EXTERNAL_CONFIG)}.")
 
 @dataclass
 class Geometry:
