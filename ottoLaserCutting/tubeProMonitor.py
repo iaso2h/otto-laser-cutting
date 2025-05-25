@@ -145,7 +145,10 @@ class Monitor:
         cursorPosLast = None
         cursorPosCurrent = None
         cursorIdleCount = 0
+        tubeProTitleCurrent        = ""
+        tubeProTitleLastCompletion = ""
         while self.isRunning:
+            tubeProTitleCurrent = ""
             time.sleep(self.checkInterval)
             currentTime = time.time()
             self.checkCount += 1
@@ -180,6 +183,7 @@ class Monitor:
                                 _, pId = win32process.GetWindowThreadProcessId(hwnd)
                                 pName = psutil.Process(pId).name()
                                 if pName == "TubePro.exe":
+                                    tubeProTitleCurrent = title
                                     win32gui.ShowWindow(hwnd, 5)
                                     win32gui.SetForegroundWindow(hwnd)
                                     logger.info(f"TubePro has been idle for too long and now it's being brought to the foreground window")
@@ -193,6 +197,7 @@ class Monitor:
                 continue
             else:
                 tubeProHWND = foregroundHWND
+                tubeProTitleCurrent = win32gui.GetWindowText(tubeProHWND)
 
             # Capture window content from TubePro
             screenshot = captureWindow(-1)
@@ -216,14 +221,13 @@ class Monitor:
                 if maxVal >= self.similarityThreshold:
                     logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
                     if name == "finished01":
-                        cutRecord.takeScreenshot(screenshot)
-                        logger.info("Cutting session is completed, stop monitoring.")
-                        self.isRunning = False
-                        os.makedirs(MONITOR_PIC, exist_ok=True)
-                        util.screenshotSave(screenshot, name, MONITOR_PIC)
-                        # TODO: detect messagebox window on completion
-
-                        break
+                        if tubeProTitleCurrent != tubeProTitleLastCompletion:
+                            tubeProTitleLastCompletion = tubeProTitleCurrent
+                            cutRecord.takeScreenshot(screenshot)
+                            logger.info("Cutting session is completed, stop monitoring.")
+                            self.isRunning = False
+                            os.makedirs(MONITOR_PIC, exist_ok=True)
+                            util.screenshotSave(screenshot, name, MONITOR_PIC)
                     elif name == "paused":
                         self.alertShutdownCount += 1
                         self.lastAlertTime = currentTime
