@@ -3,7 +3,7 @@ from config import cfg
 import util
 import cutRecord
 import hotkey
-from console import print
+# from console import print
 import emailNotify
 
 import time
@@ -20,7 +20,10 @@ import threading
 from pathlib import Path
 import copy
 
-PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
+if config.BUNDLE_MODE:
+    PIC_TEMPLATE = Path(config.BUNDLE_PATH, "src/monitorMatchTemplates")
+else:
+    PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
 MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
 logger = util.monitorLogger
 monitor = None

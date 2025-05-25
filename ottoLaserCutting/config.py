@@ -1,11 +1,10 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.108"
+VERSION     = "0.0.113"
 LASTUPDATED = "2025-05-25"
 DEV_MODE    = False
 
-import os
 import sys
 import locale
 import json
@@ -17,11 +16,12 @@ if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
     # extends the sys module by a flag frozen=True and sets the app
     # path into variable _MEIPASS'.
-    BUNDLE_PATH = sys._MEIPASS # type:ignore
+    BUNDLE_MODE = True
+    BUNDLE_PATH = Path(sys._MEIPASS)  # C:\Users\OT03\AppData\Local\Temp\_MEI233042
     EXECUTABLE_DIR = Path(sys.executable).parent
 else:
-    BUNDLE_PATH = os.path.dirname(os.path.abspath(__file__))
-    EXECUTABLE_DIR = Path(BUNDLE_PATH).parent
+    BUNDLE_MODE = False
+    EXECUTABLE_DIR = Path(__file__).parent.parent
 EXTERNAL_CONFIG = Path(EXECUTABLE_DIR, "configuration.json")
 if not EXTERNAL_CONFIG.exists():
     raise FileExistsError(f"Can't find external configuration at: {str(EXTERNAL_CONFIG)}.")

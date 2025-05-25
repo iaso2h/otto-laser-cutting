@@ -47,7 +47,7 @@ binariesArg.append(
     (
         str(
             Path(cv2Path, f"python-{pythonVersion}")),
-            f"./cv2/python{pythonVersion}"
+            f"./cv2/python-{pythonVersion}"
     )
 )
 
@@ -57,7 +57,7 @@ for pic in tubeProMonitor.PIC_TEMPLATE.iterdir():
         binariesArg.append(
             (
                 str(pic),
-                "./" + str(pic.relative_to(config.EXECUTABLE_DIR))
+                "./" + str(pic.parent.relative_to(config.EXECUTABLE_DIR))
             )
         )
 

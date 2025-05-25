@@ -29,7 +29,7 @@ shutil.copy2(
     EXTERNAL_CONFIG,
     Path(
         EXPORT_EXECUTABLE_PATH,
-        EXPORT_EXECUTABLE_PATH.stem + "Template" + EXTERNAL_CONFIG.suffix
+        EXTERNAL_CONFIG.stem + "Template" + EXTERNAL_CONFIG.suffix
     )
 )
 
