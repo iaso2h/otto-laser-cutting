@@ -13,5 +13,12 @@
     "patterns": {
         "laserFile": "^(\\d{3}[-a-zA-Z]{,3}(\\(.+?\\))?) (([^_]+? )?[^_]+?) ([^_]{,8})([_*x])?(([^\\u4e00-\\u9fff]+?)[_*x](([RT])?([0-9.]+?))?[_*x]?L([.0-9]{1,5}))?( \\d+?支 \\+ (.*?) \\d+?支)?( L(\\d{4}))?(_X\\d{,2})?",
         "workpieceDimension": "(∅[0-9.]*?)(\\*T.*?)?\\*(L.*)"
+    },
+    "email": {
+        "sslPort": 465,
+        "smtpServer": "",
+        "senderAccount": "",
+        "senderPassword": "",
+        "recieverAccount": ""
     }
 }

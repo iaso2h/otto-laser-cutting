@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.104"
+VERSION     = "0.0.106"
 LASTUPDATED = "2025-05-25"
 DEV_MODE    = False
 
@@ -44,21 +44,31 @@ class Pats:
     workpieceDimension: str
 
 @dataclass
+class Email:
+    sslPort: int
+    smtpServer: str
+    senderAccount: str
+    senderPassword: str
+    recieverAccount: str
+
+@dataclass
 class Configuration:
     geometry: Geometry
     fontSize: int
     paths: Paths
     patterns: Pats
+    email: Email
 
 
 # Load JSON and convert to dataclass
 with open(EXTERNAL_CONFIG, "r", encoding="utf-8") as f:
     data = json.load(f)
     cfg = Configuration(
-        geometry=Geometry(**data['geometry']),
-        fontSize=data['fontSize'],
-        paths=Paths(**data['paths']),
-        patterns=Pats(**data['patterns'])
+        geometry=Geometry(**data["geometry"]),
+        fontSize=data["fontSize"],
+        paths=Paths(**data["paths"]),
+        patterns=Pats(**data["patterns"]),
+        email=Email(**data["email"])
     )
 
 

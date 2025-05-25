@@ -4,6 +4,7 @@ import util
 import cutRecord
 import hotkey
 from console import print
+import emailNotify
 
 import time
 import datetime
@@ -245,6 +246,7 @@ class Monitor:
                         if maxValAlertForceReturn >= self.similarityThreshold:
                             # TODO: cut down the tube
                             logger.info("Force return is detected, stop monitoring.")
+                            emailNotify.send("Force return is detected, stop monitoring.")
                             self.isRunning = False
                             util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
                         else:
