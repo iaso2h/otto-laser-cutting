@@ -6,12 +6,13 @@ import hotkey
 from console import print
 
 import time
+import datetime
+import os
 from typing import Optional
 import cv2
 # from cv2.typing import MatLike
 import numpy as np
-import win32gui
-import win32process
+import win32gui, win32process, win32api, win32con
 import psutil
 from PIL import ImageGrab
 import threading
@@ -19,6 +20,7 @@ from pathlib import Path
 import copy
 
 PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
+MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
 logger = util.monitorLogger
 monitor = None
 
@@ -91,7 +93,19 @@ class Monitor:
 
     def stopMonitoring(self):
         self.isRunning = False
-        print("Monitoring stopped.")
+        ans = win32api.MessageBox(
+                    None,
+                    "监视已开启, 是否停止监视?",
+                    "监视询问",
+                    4096 + 64 + 4
+                )
+                #   MB_SYSTEMMODAL==4096
+                ##  Button Styles:
+                ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+                ##  To also change icon, add these values to previous number
+                ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+        if ans == win32con.IDYES:
+            print("Monitoring stopped.")
 
     def toggleMonitoring(self):
         if self.isRunning:
@@ -195,18 +209,23 @@ class Monitor:
                 if maxVal >= self.similarityThreshold:
                     logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
                     if name == "finished01":
-                        cutRecord.takeScreenshot()
+                        cutRecord.takeScreenshot(screenshot)
                         logger.info("Cutting session is completed, stop monitoring.")
                         self.isRunning = False
-                        return
+                        os.makedirs(MONITOR_PIC, exist_ok=True)
+                        util.screenshotSave(screenshot, name, MONITOR_PIC)
+                        # TODO: detect messagebox window on completion
+
+                        break
                     elif name == "paused":
                         self.alertShutdownCount += 1
                         self.lastAlertTime = currentTime
+                        # TODO: detect cutting head touching tubes
                         if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdownCount >= self.alertShutdonwThreshold:
                             print(f"Stop monitoring due to {self.alertShutdownCount} times fail in {self.alertCooldown}s")
                             self.isRunning = False
                             self.alertShutdownCount = 0
-                            return
+                            util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                         else:
                             print(f"Cutting is paused, auto-click continue.")
                             savedPosition = copy.copy(hotkey.mouse.position)
@@ -214,6 +233,8 @@ class Monitor:
                             hotkey.mouse.press(hotkey.Button.left)
                             hotkey.mouse.release(hotkey.Button.left)
                             hotkey.mouse.position = savedPosition
+
+                        break
                     elif name == "alert":
                         matchResultAlertForceReturn = cv2.matchTemplate(
                             screenshotCV,
@@ -225,10 +246,13 @@ class Monitor:
                             # TODO: cut down the tube
                             logger.info("Force return is detected, stop monitoring.")
                             self.isRunning = False
+                            util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
                         else:
                             logger.info("Alert is detected, stop monitoring.")
                             self.isRunning = False
-                            return
+                            util.screenshotSave(screenshot, "alert", MONITOR_PIC)
+
+                        break
                     elif name == "noAlert":
                         matchResultRunning = cv2.matchTemplate(
                             screenshotCV,
@@ -241,6 +265,8 @@ class Monitor:
                         ):
                             self.alertShutdonwCount = 0
                             logger.info("Clear alert count reseted. Back to the track")
+
+                        break
 
 
     def checkTemplateMatches(self):

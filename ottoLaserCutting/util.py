@@ -11,6 +11,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from openpyxl import Workbook
 from typing import List
+from PIL.Image import Image
 
 MONITOR_LOG_PATH = Path(cfg.paths.otto, r"存档/切割机监视.log")
 
@@ -22,7 +23,7 @@ handler = RotatingFileHandler(
     encoding="utf-8",
 )
 handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(message)s")
+    logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
 )
 
 monitorLogger = logging.getLogger("tubeProMonitor")
@@ -138,4 +139,15 @@ def diametartSymbolUnify(input: str) -> str:
     input = input.replace("Φ", "∅")
     input = input.replace("φ", "∅")
     return input
+
+
+def screenshotSave(screenshot: Image, namePrefix:str, dstDirPath: Path) -> Path:
+    os.makedirs(dstDirPath, exist_ok=True)
+    datetimeNow = datetime.datetime.now()
+    screenshotPath = Path(
+            dstDirPath,
+            f'{namePrefix} {datetimeNow.strftime("%Y-%m-%d %H%M%S")}.png'
+            )
+    screenshot.save(screenshotPath)
+    return screenshotPath
 

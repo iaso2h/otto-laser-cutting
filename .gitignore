@@ -2,6 +2,7 @@ export/
 test*
 *.rtf
 demo*
+bk*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

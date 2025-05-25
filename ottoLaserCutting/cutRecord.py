@@ -13,6 +13,7 @@ import win32api
 from PIL import Image, ImageFilter, ImageGrab
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+from typing import Optional
 from pathlib import Path
 
 SCREENSHOT_DIR_PATH = Path(cfg.paths.otto, r"存档/截图")
@@ -53,46 +54,46 @@ def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
             ws["F1"].value = "截图文件" # }}}
 
 
-def takeScreenshot() -> None: # {{{
-    if "ctrl" in keySet.keys:
-        return os.startfile(CUT_RECORD_PATH)
-    elif "shfit" in keySet.keys:
-        return relinkScreenshots()
-    import win32gui
-    import win32process
-    import psutil
+def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
+    if not screenshot:
+        if "ctrl" in keySet.keys:
+            return os.startfile(CUT_RECORD_PATH)
+        elif "shfit" in keySet.keys:
+            return relinkScreenshots()
+        import win32gui
+        import win32process
+        import psutil
 
-    hwndTitles = {}
-    def winEnumHandler(hwnd, ctx):
-        if win32gui.IsWindowVisible(hwnd):
-            windowText = win32gui.GetWindowText(hwnd)
-            if windowText:
-                hwndTitles[hwnd] = windowText
-        return True
+        hwndTitles = {}
+        def winEnumHandler(hwnd, ctx):
+            if win32gui.IsWindowVisible(hwnd):
+                windowText = win32gui.GetWindowText(hwnd)
+                if windowText:
+                    hwndTitles[hwnd] = windowText
+            return True
 
-    win32gui.EnumWindows(winEnumHandler, None)
+        win32gui.EnumWindows(winEnumHandler, None)
 
-    partFileName = ""
-    for hwnd, title in hwndTitles.items():
-        if title.startswith("TubePro"):
-            _, pId = win32process.GetWindowThreadProcessId(hwnd)
-            pName = psutil.Process(pId).name()
-            if pName == "TubePro.exe":
-                partFileName = re.sub(r"^TubePro(\(.+?\))? (.+\.zzx).*?$", r"\2", title, re.IGNORECASE)
+        partFileName = ""
+        for hwnd, title in hwndTitles.items():
+            if title.startswith("TubePro"):
+                _, pId = win32process.GetWindowThreadProcessId(hwnd)
+                pName = psutil.Process(pId).name()
+                if pName == "TubePro.exe":
+                    partFileName = re.sub(r"^TubePro(\(.+?\))? (.+\.zzx).*?$", r"\2", title, re.IGNORECASE)
 
-                win32gui.ShowWindow(hwnd, 5)
-                win32gui.SetForegroundWindow(hwnd)
-                break
+                    win32gui.ShowWindow(hwnd, 5)
+                    win32gui.SetForegroundWindow(hwnd)
+                    break
 
-    if not partFileName:
-        return print("Screenshot taking is abort due to TubePro is not running.")
+        if not partFileName:
+            return print("Screenshot taking is abort due to TubePro is not running.")
+        screenshot = ImageGrab.grab()
 
     # Check current forground program
     datetimeNow = datetime.datetime.now()
-    timeStamp = datetimeNow.strftime("%Y/%m/%d %H:%M:%S")
-    screenshot = ImageGrab.grab()
-    screenshotPath = Path(SCREENSHOT_DIR_PATH, f'屏幕截图 {datetimeNow.strftime("%Y-%m-%d %H%M%S")}.png')
-    screenshot.save(screenshotPath)
+    excelTimeStamp = datetimeNow.strftime("%Y/%m/%d %H:%M:%S")
+    screenshotPath = util.screenshotSave(screenshot, "屏幕截图", SCREENSHOT_DIR_PATH)
 
     # Using OCR to get process count
     wb = getWorkbook()
@@ -108,7 +109,7 @@ def takeScreenshot() -> None: # {{{
         ws["E1"].value = "已切量/需求量"
         ws["F1"].value = "截图文件"
 
-    newRecord(ws, screenshotPath, partFileName, timeStamp)
+    newRecord(ws, screenshotPath, partFileName, excelTimeStamp)
     savePath = util.saveWorkbook(wb, CUT_RECORD_PATH)
 
     if os.getlogin() != "OT03":
