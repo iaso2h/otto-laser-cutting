@@ -1,7 +1,8 @@
 import util
-import config
 from config import cfg
+from console import print
 import keySet
+import style
 
 import chardet
 import os
@@ -31,6 +32,8 @@ def getEncoding(filePath) -> str:
         # Detect the encoding
         rawData = f.read()
         result = chardet.detect(rawData)
+        if not result:
+            return ""
         if not result["encoding"]:
             return ""
         else:
@@ -221,11 +224,11 @@ def parse(
                 }
     else:
         if wb.active.title == "Sheet": # type: ignore
-            ws = wb.active # type: Worksheet
-            ws.title = rtfFile.stem
+            ws = wb.active # type: ignore
+            ws.title = rtfFile.stem # type: ignore
         else:
             ws = wb.create_sheet(rtfFile.stem, 0)
-        fillWorkbook(ws, parsedResult, True)
+        fillWorkbook(ws, parsedResult, True) # type: ignore
         return {
                 "workbook":     wb,
                 "parsedResult": parsedResult
@@ -284,7 +287,6 @@ def parsePeriodLog():
         return parseAllLog()
     else:
         timeDeltaLiteral = 1
-    timeDeltaLiteral = 1
 
     wb = Workbook()
     now = datetime.datetime.now()
@@ -315,30 +317,53 @@ def parsePeriodLog():
 
 
 def rtfSimplify():
-    for p in TUBEPRO_LOG_PATH.iterdir():
-        if p.suffix != ".rtf" or "精简" in p.stem:
-            continue
+    if "ctrl" in keySet.keys:
+        return os.startfile(TUBEPRO_LOG_PATH)
+    elif "shift" in keySet.keys:
+        timeDeltaLiteral = 7
+    elif "alt" in keySet.keys:
+        timeDeltaLiteral = 360
+    else:
+        timeDeltaLiteral = 1
 
-        with open(p, "r", encoding=getEncoding(str(p))) as f1:
-            content = rtf_to_text(f1.read())
-            lines = content.split("\n")
-        refineLines = []
-        for line in lines:
-            m1 = laserFileOpenPat.match(line)
-            m2 = segmentPat.match(line)
-            m3 = scheduelTotalPat.match(line)
-            m4 = scheduelLoopEndPat.match(line)
-            m5 = loopStartPat.match(line)
-            if not any((m1, m2, m3, m4, m5)):
+    now = datetime.datetime.now()
+    parsedPeriodCount = 0
+    for loopCount in range(3):
+        if parsedPeriodCount > 0:
+            break
+        else:
+            # Increase the time delta window to if no parsed files
+            timeDeltaLiteral = timeDeltaLiteral * (7 ** loopCount)
+        timeDelta = datetime.timedelta(days=timeDeltaLiteral)
+
+        for f in TUBEPRO_LOG_PATH.iterdir():
+            if f.suffix != ".rtf" or "精简" in f.stem:
                 continue
-            else:
-                refineLines.append(line + "\n")
-        targetPath = Path(
-            p.parent,
-            "精简" + p.stem + p.suffix
-        )
-        with open(targetPath, mode="w", encoding="utf-8") as f2:
-            for line in refineLines:
-                f2.write(line)
-        print("导出日志: ", targetPath)
+
+            rtfTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
+            if now - rtfTime <= timeDelta:
+                with open(f, "r", encoding=getEncoding(str(f))) as f1:
+                    content = rtf_to_text(f1.read())
+                    lines = content.split("\n")
+                refineLines = []
+                for line in lines:
+                    m1 = laserFileOpenPat.match(line)
+                    m2 = segmentPat.match(line)
+                    m3 = scheduelTotalPat.match(line)
+                    m4 = scheduelLoopEndPat.match(line)
+                    m5 = loopStartPat.match(line)
+                    if not any((m1, m2, m3, m4, m5)):
+                        continue
+                    else:
+                        refineLines.append(line + "\n")
+                targetPath = Path(
+                    f.parent,
+                    "精简" + f.stem + f.suffix
+                )
+                with open(targetPath, mode="w", encoding="utf-8") as f2:
+                    for line in refineLines:
+                        f2.write(line)
+                print("导出日志: ", str(targetPath))
+
+    print("rtf日志精简完成")
 
