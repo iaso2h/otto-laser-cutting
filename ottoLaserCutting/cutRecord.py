@@ -55,39 +55,42 @@ def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
 
 
 def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
+    if "ctrl" in keySet.keys:
+        return os.startfile(CUT_RECORD_PATH)
+    elif "shfit" in keySet.keys:
+        return relinkScreenshots()
+    import win32gui
+    import win32process
+    import psutil
+
+    # Get laser file info
+    hwndTitles = {}
+    def winEnumHandler(hwnd, ctx):
+        if win32gui.IsWindowVisible(hwnd):
+            windowText = win32gui.GetWindowText(hwnd)
+            if windowText:
+                hwndTitles[hwnd] = windowText
+        return True
+
+    win32gui.EnumWindows(winEnumHandler, None)
+
+    partFileName = ""
+    for hwnd, title in hwndTitles.items():
+        if title.startswith("TubePro"):
+            _, pId = win32process.GetWindowThreadProcessId(hwnd)
+            pName = psutil.Process(pId).name()
+            if pName == "TubePro.exe":
+                partFileName = re.sub(r"^TubePro(\(.+?\))? (.+\.zzx).*?$", r"\2", title, re.IGNORECASE)
+
+                win32gui.ShowWindow(hwnd, 5)
+                win32gui.SetForegroundWindow(hwnd)
+                break
+
+    if not partFileName:
+        return print("Screenshot taking is abort due to TubePro is not running.")
+
+
     if not screenshot:
-        if "ctrl" in keySet.keys:
-            return os.startfile(CUT_RECORD_PATH)
-        elif "shfit" in keySet.keys:
-            return relinkScreenshots()
-        import win32gui
-        import win32process
-        import psutil
-
-        hwndTitles = {}
-        def winEnumHandler(hwnd, ctx):
-            if win32gui.IsWindowVisible(hwnd):
-                windowText = win32gui.GetWindowText(hwnd)
-                if windowText:
-                    hwndTitles[hwnd] = windowText
-            return True
-
-        win32gui.EnumWindows(winEnumHandler, None)
-
-        partFileName = ""
-        for hwnd, title in hwndTitles.items():
-            if title.startswith("TubePro"):
-                _, pId = win32process.GetWindowThreadProcessId(hwnd)
-                pName = psutil.Process(pId).name()
-                if pName == "TubePro.exe":
-                    partFileName = re.sub(r"^TubePro(\(.+?\))? (.+\.zzx).*?$", r"\2", title, re.IGNORECASE)
-
-                    win32gui.ShowWindow(hwnd, 5)
-                    win32gui.SetForegroundWindow(hwnd)
-                    break
-
-        if not partFileName:
-            return print("Screenshot taking is abort due to TubePro is not running.")
         screenshot = ImageGrab.grab()
 
     # Check current forground program
