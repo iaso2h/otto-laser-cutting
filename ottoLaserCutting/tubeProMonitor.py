@@ -3,13 +3,14 @@ from config import cfg
 import util
 import cutRecord
 import hotkey
-# from console import print
+from console import print
 import emailNotify
 
 import time
-import datetime
+from datetime import datetime, timedelta
 import os
 import ctypes
+import subprocess
 from typing import Optional
 import cv2
 # from cv2.typing import MatLike
@@ -34,7 +35,7 @@ class Monitor:
         self.isRunning = False
         self.templateHeight = 0
         self.templateWidth = 0
-        self.lastAlertTime = 0
+        self.lastAlertTimeStamp = 0.0
         self.checkInterval = 3
         self.checkCount = 0
         self.programNotFoundRetry = 60
@@ -92,13 +93,13 @@ class Monitor:
 
 
 
-    def startMonitoring(self):
+    def startMonitoring(self) -> None:
         self.isRunning = True
         print("Monitoring started.")
         threading.Thread(target=self._monitor_loop, daemon=True).start()
 
 
-    def stopMonitoring(self):
+    def stopMonitoring(self) -> None:
         self.isRunning = False
         ans = win32api.MessageBox(
                     None,
@@ -114,45 +115,34 @@ class Monitor:
         if ans == win32con.IDYES:
             print("Monitoring stopped.")
 
-    def toggleMonitoring(self):
+
+    def toggleMonitoring(self) -> None:
         if self.isRunning:
             self.stopMonitoring()
         else:
             self.startMonitoring()
 
-    @staticmethod
-    def getTubeProHWND() -> int:
-        hwndTitle = {}
-        def winEnumHandler(hwnd, ctx):
-            if win32gui.IsWindowVisible(hwnd):
-                windowText = win32gui.GetWindowText(hwnd)
-                if windowText:
-                    hwndTitle[hwnd] = windowText
-            return True
 
-        win32gui.EnumWindows(winEnumHandler, None)
-
-        targetHWND = -1
-        for hwnd, title in hwndTitle.items():
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            pName = psutil.Process(pid).name()
-            if pName.lower() == "tubepro.exe":
-                targetHWND = hwnd
-                break
-
-        return targetHWND
+    def shutdownOffWorkTime(self, currentTime: datetime):
+        timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
+        timeGetOffWork = timeGetOffWork - timedelta(days=1)
+        timeGoToWork   = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0)
+        if timeGetOffWork <= currentTime <= timeGoToWork:
+            self.isRunning = False
+            subprocess.call(["shutdown", "-s"])
 
 
-    def _monitor_loop(self):
+
+    def _monitor_loop(self) -> None:
         cursorPosLast = None
         cursorPosCurrent = None
         cursorIdleCount = 0
+        currentTime = datetime.now()
         tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
         while self.isRunning:
             tubeProTitleCurrent = ""
             time.sleep(self.checkInterval)
-            currentTime = time.time()
             self.checkCount += 1
 
             logger.info("")
@@ -230,21 +220,35 @@ class Monitor:
                             self.isRunning = False
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
+                            self.shutdownOffWorkTime(currentTime)
                     elif name == "paused":
                         matchResultPausedCuttingHeadTouch = cv2.matchTemplate(
                             screenshotCV,
                             self.templatePausedCuttingHeadTouch,
                             cv2.TM_CCOEFF_NORMED
                         )
-                        _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(matchResultPausedCuttingHeadTouch)
+                        _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(
+                            matchResultPausedCuttingHeadTouch
+                        )
                         if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
                             self.alertShutdownCount += 1
-                            self.lastAlertTime = currentTime
-                            if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdownCount >= self.alertShutdonwThreshold:
+                            self.lastAlertTimeStamp = currentTime.timestamp()
+                            if (
+                                (
+                                    int(
+                                        currentTime.timestamp()
+                                        - self.lastAlertTimeStamp
+                                        )
+                                    < self.alertCooldown
+                                )
+                                and self.alertShutdownCount
+                                >= self.alertShutdonwThreshold
+                            ):
                                 print(f"Stop monitoring due to {self.alertShutdownCount} times fail in {self.alertCooldown}s")
                                 self.isRunning = False
                                 self.alertShutdownCount = 0
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
+                                self.shutdownOffWorkTime(currentTime)
                                 break
                             else:
                                 print(f"Cutting is paused, auto-click continue.")
@@ -260,7 +264,9 @@ class Monitor:
                             self.templateAlertForceReturn,
                             cv2.TM_CCOEFF_NORMED
                         )
-                        _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(matchResultAlertForceReturn)
+                        _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(
+                            matchResultAlertForceReturn
+                        )
                         if maxValAlertForceReturn >= self.similarityThreshold:
                             # TODO: cut down the tube
                             logger.info("Force return is detected, stop monitoring.")
@@ -280,8 +286,10 @@ class Monitor:
                             cv2.TM_CCOEFF_NORMED
                         )
                         _, maxValAlertRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
-                        if maxValAlertRunning >= self.similarityThreshold and self.alertShutdonwCount and (
-                            currentTime - self.lastAlertTime >= self.alertCooldown
+                        if (
+                            maxValAlertRunning >= self.similarityThreshold
+                            and self.alertShutdonwCount
+                            and (currentTime.timestamp() - self.lastAlertTimeStamp >= self.alertCooldown)
                         ):
                             self.alertShutdonwCount = 0
                             logger.info("Clear alert count reseted. Back to the track")
