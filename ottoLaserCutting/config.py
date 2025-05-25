@@ -1,8 +1,9 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.101"
+VERSION     = "0.0.103"
 LASTUPDATED = "2025-05-24"
+DEV_MODE    = False
 
 import os
 import sys
@@ -49,7 +50,7 @@ class Configuration:
 
 
 # Load JSON and convert to dataclass
-with open(Path(EXECUTABLE_PATH.parent, "configuration.json"), "r", encoding="utf-8") as f:
+with open(EXTERNAL_CONFIG, "r", encoding="utf-8") as f:
     data = json.load(f)
     cfg = Configuration(
         geometry=Geometry(**data['geometry']),

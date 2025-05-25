@@ -1,7 +1,6 @@
 import util
 import config
 from config import cfg
-import style
 import keySet
 
 import chardet

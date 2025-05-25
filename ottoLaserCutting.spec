@@ -1,3 +1,5 @@
+from ottoLaserCutting import tubeProMonitor, config
+
 import os
 from pathlib import Path
 from sys import version_info
@@ -48,6 +50,16 @@ binariesArg.append(
             f"./cv2/python{pythonVersion}"
     )
 )
+
+# Add monitor matching templates
+for pic in tubeProMonitor.PIC_TEMPLATE.iterdir():
+    if pic.is_file() and pic.suffix == ".png":
+        binariesArg.append(
+            (
+                str(pic),
+                "./" + str(pic.relative_to(config.EXECUTABLE_DIR))
+            )
+        )
 
 
 block_cipher = None

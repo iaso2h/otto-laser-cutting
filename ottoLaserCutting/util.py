@@ -37,7 +37,7 @@ def getTimeStamp() -> str:
 
 
 def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=False) -> Path: # {{{
-    fallbackExportDir = Path(config.EXECUTABLE_PATH.parent, "export")
+    fallbackExportDir = Path(config.EXECUTABLE_DIR, "export")
     timeStr = str(datetime.datetime.now().strftime("%Y-%m-%d %H%M%S%f"))
     os.makedirs(fallbackExportDir, exist_ok=True)
 

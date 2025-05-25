@@ -4,13 +4,13 @@ import cutRecord
 from pynput import keyboard
 from pynput.mouse import Button, Controller
 from PIL import ImageGrab
-import win32gui, win32process, win32api, win32con
+import win32gui, win32process, win32api
 import psutil
 import time
 import copy
 
 mouse = Controller()
-mouseInterval = 0.075
+MOUSE_INTERVAL = 0.075
 
 
 def hotkeyAlignTube():
@@ -57,11 +57,11 @@ def hotkeyAlignTube():
         mouse.position = (302, 96 + deltaY)
         mouse.press(Button.left)
         mouse.release(Button.left)
-        time.sleep(mouseInterval)
+        time.sleep(MOUSE_INTERVAL)
         mouse.position = (302, 146 + deltaY)
         mouse.press(Button.left)
         mouse.release(Button.left)
-        time.sleep(mouseInterval)
+        time.sleep(MOUSE_INTERVAL)
         mouse.position = (455, 173 + deltaY)
         mouse.press(Button.left)
         mouse.release(Button.left)
