@@ -9,6 +9,7 @@ import emailNotify
 import time
 import datetime
 import os
+import ctypes
 from typing import Optional
 import cv2
 # from cv2.typing import MatLike
@@ -182,7 +183,9 @@ class Monitor:
                                     win32gui.ShowWindow(hwnd, 5)
                                     win32gui.SetForegroundWindow(hwnd)
                                     logger.info(f"TubePro has been idle for too long and now it's being brought to the foreground window")
-                                    break
+                            elif title == cutRecord.MESSAGEBOX_TITLE:
+                                ctypes.windll.user32.PostMessageW(hwnd, win32con.WM_CLOSE, 0, 0)
+
 
                         cursorIdleCount = 0 # reset
 

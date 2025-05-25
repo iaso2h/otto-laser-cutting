@@ -19,6 +19,7 @@ from pathlib import Path
 SCREENSHOT_DIR_PATH = Path(cfg.paths.otto, r"存档/截图")
 CUT_RECORD_PATH     = Path(cfg.paths.otto, r"存档/开料记录.xlsx")
 LASER_OCR_FIX_PATH  = Path(cfg.paths.otto, r"辅助程序/激光名称OCR修复规则.json")
+MESSAGEBOX_TITLE = "激光开料"
 
 def getWorkbook() -> None:
     if CUT_RECORD_PATH.exists():
@@ -121,7 +122,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
     win32api.MessageBox(
                 None,
                 f"记录成功",
-                "Info",
+                MESSAGEBOX_TITLE,
                 4096 + 64 + 0
             )
             #   MB_SYSTEMMODAL==4096
