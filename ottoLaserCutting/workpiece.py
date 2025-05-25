@@ -15,6 +15,7 @@ from openpyxl import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.comments import Comment
 from pathlib import Path
+from openpyxl.styles import Font
 from openpyxl.styles.numbers import BUILTIN_FORMATS
 # https://openpyxl.readthedocs.io/en/3.1.3/_modules/openpyxl/styles/numbers.html
 from decimal import Decimal
@@ -100,6 +101,7 @@ def removeRedundantLaserFile() -> None:
 def exportDimensions():
     dstPath1 = WORKPIECE_INFO_PATH
     dstPath2 = Path(cfg.paths.warehousing, "零件规格总览.xlsx")
+    boldFont = Font(bold=True)
     if "ctrl" in keySet.keys:
         return os.startfile(dstPath1)
     laserFilePaths = util.getAllLaserFiles()
@@ -134,17 +136,17 @@ def exportDimensions():
     fileNamePat      = re.compile(cfg.patterns.laserFile)
     tubeDimensionPat = re.compile(cfg.patterns.workpieceDimension)
     for lIdx, p in enumerate(laserFilePaths):
+        rowMax = ws.max_row + 1
         if p.suffix == ".zx" or p.suffix == ".zzx":
             fileNameMatch = fileNamePat.match(str(p.stem))
+            boldFontChk = True
         else:
             fileNameMatch = fileNamePat.match(str(p.name))
+            boldFontChk = False
 
         workpieceNickName  = ""
         workpieceDimension = ""
         surfaceAreaEval = 0
-
-        rowMax = ws.max_row + 1
-
         fileNameMatchTick = False
 
         if not fileNameMatch:
@@ -152,6 +154,32 @@ def exportDimensions():
                 workpieceFullName = p.stem
             else:
                 workpieceFullName = p.name
+
+            if workpieceFullName in workpieceFullNamesWithDimension:
+                removeDummyLaserFile(p)
+                continue
+            else:
+                workpieceFullNamesWithDimension.append(workpieceFullName)
+
+            # Set font to be bold when the workpiece is produce in lasercutting machine
+            if (
+                p.suffix == ".zx"
+                or p.suffix == ".zzx"
+                or "焊接组合" in p.stem
+                or "弯管" in p.stem
+                or "主体管" in p.stem
+                or "把手管" in p.stem
+                or "辅助轮管" in p.stem
+                or "调节管" in p.stem
+                or "侧管" in p.stem
+                or "支管" in p.stem
+                or "座架" in p.stem
+                or "扶手管" in p.stem
+                or "铝拐臂" in p.stem
+            ):
+                for colIdx in range(1, 10):
+                    ws.cell(row=rowMax, column=colIdx).font = boldFont
+
             ws[f"A{rowMax}"].value = workpieceFullName
             ws[f"A{rowMax}"].number_format = "@"
             # namingly ws[f"A{rowMax}"].number_format = BUILTIN_FORMATS[49]
@@ -169,11 +197,6 @@ def exportDimensions():
             ws[f"B{rowMax}"].value = workpieceNickName
             ws[f"B{rowMax}"].number_format = "@"
 
-            if workpieceFullName in workpieceFullNamesWithDimension:
-                removeDummyLaserFile(p)
-                continue
-            else:
-                workpieceFullNamesWithDimension.append(workpieceFullName)
         else:
             fileNameMatchTick = True
 
@@ -211,6 +234,25 @@ def exportDimensions():
 
             tailingWorkpiece = fileNameMatch.group(14)        # Optional
             workpieceLongTubeLength = fileNameMatch.group(16) # Optional
+
+            # Set font to be bold when the workpiece is produce in lasercutting machine
+            if (
+                p.suffix == ".zx"
+                or p.suffix == ".zzx"
+                or "焊接组合" in p.stem
+                or "弯管" in p.stem
+                or "主体管" in p.stem
+                or "把手管" in p.stem
+                or "辅助轮管" in p.stem
+                or "调节管" in p.stem
+                or "侧管" in p.stem
+                or "支管" in p.stem
+                or "座架" in p.stem
+                or "扶手管" in p.stem
+                or "铝拐臂" in p.stem
+            ):
+                for colIdx in range(1, 10):
+                    ws.cell(row=rowMax, column=colIdx).font = boldFont
 
             ws[f"A{rowMax}"].value = workpieceFullName
             ws[f"A{rowMax}"].number_format = "@"

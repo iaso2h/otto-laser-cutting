@@ -93,10 +93,7 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
 def strStandarize(old: Path) -> Path:
     if old.is_file():
         new = str(old)
-        # old = old.replace("∅", "∅")
-        new = new.replace("Ø", "∅")
-        new = new.replace("Φ", "∅")
-        new = new.replace("φ", "∅")
+        new = diametartSymbolUnify(new)
         new = new.replace("_T1_", "_T1.0_")
         new = new.replace("xT1x", "xT1.0x")
         new = re.sub(r"\s{2,}", " ", new)
