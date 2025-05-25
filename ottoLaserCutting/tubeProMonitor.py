@@ -45,6 +45,7 @@ class Monitor:
         self.enabled = True
         self.templateRunning = None
         self.templatePaused = None
+        self.templatePausedCuttingHeadTouch = None
         self.templateFinished01 = None
         self.templateFinished02 = None
         self.templateAlert = None
@@ -60,16 +61,17 @@ class Monitor:
 
 
     def loadTemplates(self) -> None:
-        """Set up different templates"""
+        """Set up different Opencv templates"""
         # Check existences of all templates
         templates = [
-            ("templateRunning",          "running.png"),
-            ("templatePaused",           "paused.png"),
-            ("templateFinished01",       "finished01.png"),
-            ("templateFinished02",       "finished02.png"),
-            ("templateAlert",            "alert.png"),
-            ("templateAlertForceReturn", "alertForceReturn.png"),
-            ("templateNoAlert",          "noAlert.png")
+            ("templateRunning",                "running.png"),
+            ("templatePaused",                 "paused.png"),
+            ("templatePausedCuttingHeadTouch", "pausedWithCuttingHeadTouch.png"),
+            ("templateFinished01",             "finished01.png"),
+            ("templateFinished02",             "finished02.png"),
+            ("templateAlert",                  "alert.png"),
+            ("templateAlertForceReturn",       "alertForceReturn.png"),
+            ("templateNoAlert",                "noAlert.png")
         ]
         for attrName, fileName in templates:
             p = Path(PIC_TEMPLATE, fileName)
@@ -210,10 +212,10 @@ class Monitor:
 
             # Compare with templates
             for name, attrName in (
-                ("paused",           "templatePaused"),
-                ("finished01",       "templateFinished01"),
-                ("alert",            "templateAlert"),
-                ("noAlert",          "templateNoAlert"),
+                ("paused",     "templatePaused"),
+                ("finished01", "templateFinished01"),
+                ("alert",      "templateAlert"),
+                ("noAlert",    "templateNoAlert"),
             ):
                 template = getattr(self, attrName)
                 matchResult = cv2.matchTemplate(screenshotCV, template, cv2.TM_CCOEFF_NORMED)
@@ -229,23 +231,29 @@ class Monitor:
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
                     elif name == "paused":
-                        self.alertShutdownCount += 1
-                        self.lastAlertTime = currentTime
-                        # TODO: detect cutting head touching tubes
-                        if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdownCount >= self.alertShutdonwThreshold:
-                            print(f"Stop monitoring due to {self.alertShutdownCount} times fail in {self.alertCooldown}s")
-                            self.isRunning = False
-                            self.alertShutdownCount = 0
-                            util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
-                        else:
-                            print(f"Cutting is paused, auto-click continue.")
-                            savedPosition = copy.copy(hotkey.mouse.position)
-                            hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
-                            hotkey.mouse.press(hotkey.Button.left)
-                            hotkey.mouse.release(hotkey.Button.left)
-                            hotkey.mouse.position = savedPosition
-
-                        break
+                        matchResultPausedCuttingHeadTouch = cv2.matchTemplate(
+                            screenshotCV,
+                            self.templatePausedCuttingHeadTouch,
+                            cv2.TM_CCOEFF_NORMED
+                        )
+                        _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(matchResultPausedCuttingHeadTouch)
+                        if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
+                            self.alertShutdownCount += 1
+                            self.lastAlertTime = currentTime
+                            if (currentTime - self.lastAlertTime < self.alertCooldown) and self.alertShutdownCount >= self.alertShutdonwThreshold:
+                                print(f"Stop monitoring due to {self.alertShutdownCount} times fail in {self.alertCooldown}s")
+                                self.isRunning = False
+                                self.alertShutdownCount = 0
+                                util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
+                                break
+                            else:
+                                print(f"Cutting is paused, auto-click continue.")
+                                util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
+                                savedPosition = copy.copy(hotkey.mouse.position)
+                                hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
+                                hotkey.mouse.press(hotkey.Button.left)
+                                hotkey.mouse.release(hotkey.Button.left)
+                                hotkey.mouse.position = savedPosition
                     elif name == "alert":
                         matchResultAlertForceReturn = cv2.matchTemplate(
                             screenshotCV,
@@ -259,12 +267,12 @@ class Monitor:
                             emailNotify.send("Force return is detected, stop monitoring.")
                             self.isRunning = False
                             util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
+                            break
                         else:
                             logger.info("Alert is detected, stop monitoring.")
                             self.isRunning = False
                             util.screenshotSave(screenshot, "alert", MONITOR_PIC)
-
-                        break
+                            break
                     elif name == "noAlert":
                         matchResultRunning = cv2.matchTemplate(
                             screenshotCV,
@@ -294,16 +302,16 @@ class Monitor:
         screenshotCVUint8 = screenshotCV
 
         # Compare with template
-        print("--------------")
         matchResults = []
         for name, attrName in (
-            ("running",          "templateRunning"),
-            ("paused",           "templatePaused"),
-            ("finished01",       "templateFinished01"),
-            ("finished02",       "templateFinished02"),
-            ("alert",            "templateAlert"),
-            ("alertForceReturn", "templateAlertForceReturn"),
-            ("noAlert",          "templateNoAlert"),
+            ("running",                    "templateRunning"),
+            ("paused",                     "templatePaused"),
+            ("pausedWithCuttingHeadTouch", "templatePausedCuttingHeadTouch"),
+            ("finished01",                 "templateFinished01"),
+            ("finished02",                 "templateFinished02"),
+            ("alert",                      "templateAlert"),
+            ("alertForceReturn",           "templateAlertForceReturn"),
+            ("noAlert",                    "templateNoAlert"),
         ):
             template = getattr(self, attrName)
             matchResult = cv2.matchTemplate(screenshotCVUint8, template, cv2.TM_CCOEFF_NORMED)

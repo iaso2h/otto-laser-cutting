@@ -2,11 +2,11 @@ from config import cfg
 from console import print
 import smtplib, ssl
 
-sslPort = cfg.email.sslPort
-smtp_server = cfg.email.smtpServer
+sslPort        = cfg.email.sslPort
+smtp_server    = cfg.email.smtpServer
 receiver_email = cfg.email.recieverAccount
-sender_email = cfg.email.senderAccount
-password = cfg.email.senderPassword
+sender_email   = cfg.email.senderAccount
+password       = cfg.email.senderPassword
 
 def send(message: str):
     if not all((smtp_server, receiver_email, sender_email, password)):
