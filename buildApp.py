@@ -28,8 +28,8 @@ PyInstaller.__main__.run(
 shutil.copy2(
     EXTERNAL_CONFIG,
     Path(
-        EXPORT_EXECUTABLE_PATH.parent,
-        EXPORT_EXECUTABLE_PATH.stem + "Template" + EXPORT_EXECUTABLE_PATH.suffix
+        EXPORT_EXECUTABLE_PATH,
+        EXPORT_EXECUTABLE_PATH.stem + "Template" + EXTERNAL_CONFIG.suffix
     )
 )
 

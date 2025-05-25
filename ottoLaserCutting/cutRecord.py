@@ -1,5 +1,5 @@
 import util
-import console
+from console import print
 from config import cfg
 
 import keySet
@@ -25,7 +25,6 @@ def getWorkbook() -> None:
     else:
         return Workbook()
 
-print = console.print
 
 screenshotPaths = []
 def initSheetFromScreenshots(wb: Workbook) -> None: # {{{

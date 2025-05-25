@@ -1,7 +1,7 @@
 import config
 from config import cfg
 import util
-import console
+from  console import print
 
 import re
 import copy
@@ -15,7 +15,6 @@ from openpyxl.worksheet.cell_range import CellRange
 
 DISPATCH_FILE_PATH                   = Path(cfg.paths.otto, r"派工单（模板+空表）.xlsx")
 PRODUCT_ID_CATERGORY_CONVENTION_PATH = Path(cfg.paths.otto, r"辅助程序/型号类别对照规则.json")
-print = console.print
 # TODO: resolve when file path not found
 partColumnLetter = "E"
 partColumnNum = 5

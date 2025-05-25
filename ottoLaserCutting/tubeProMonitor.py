@@ -3,6 +3,7 @@ from config import cfg
 import util
 import cutRecord
 import hotkey
+from console import print
 
 import time
 from typing import Optional
@@ -130,7 +131,8 @@ class Monitor:
             currentTime = time.time()
             self.checkCount += 1
 
-            logger.info(f"\n\nMonitoring for the {self.checkCount} times...")
+            logger.info("")
+            logger.info(f"Monitoring for the {self.checkCount} times...")
 
             hwndTitles = {}
             def winEnumHandler(hwnd, ctx):
@@ -240,13 +242,6 @@ class Monitor:
                             self.alertShutdonwCount = 0
                             logger.info("Clear alert count reseted. Back to the track")
 
-        # if maxVal < self.similarityThreshold:
-            #     print(f"Match failed at similarity {maxVal}.")
-            # else:
-            #     print("Match succeeded.")
-            #     if :
-            #     logger.info("Everything is fine")
-
 
     def checkTemplateMatches(self):
         screenshot = captureWindow(-1)
@@ -301,20 +296,3 @@ def captureWindow(hwnd):
             return None
     else:
         return ImageGrab.grab()
-
-
-def main():
-    monitor = Monitor()
-    if monitor.enabled:
-        monitor.startMonitoring()
-    else:
-        return
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        monitor.stopMonitoring()
-        print("\nMonitoring stopped.")
-    finally:
-        cv2.destroyAllWindows()

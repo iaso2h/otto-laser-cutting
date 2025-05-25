@@ -1,5 +1,5 @@
 import config
-import console
+from console import print
 import util
 import shutil
 import keySet
@@ -21,7 +21,6 @@ from decimal import Decimal
 
 WORKPIECE_INFO_PATH = Path(cfg.paths.otto, r"存档/零件规格总览.xlsx")
 WORKPIECE_DICT = Path(cfg.paths.otto, r"辅助程序/workpieceDict.json")
-print = console.print
 
 def bankRound(precision: float, digitLiteral: str) -> float:
     return float(Decimal(digitLiteral).quantize(Decimal(precision), rounding = "ROUND_HALF_UP"))

@@ -88,7 +88,7 @@ exe = EXE( # type: ignore
     a.zipfiles,
     a.datas,
     [],
-    name='ottoLaserCutting',
+    name='OttoLaserCutting',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

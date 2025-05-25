@@ -2,7 +2,6 @@ logFlow = ""
 
 def print(*args, **kwargs):
     import dearpygui.dearpygui as dpg
-    import re
     global logFlow
     if logFlow == "":
         logFlow = "\n".join(args) + "\n"

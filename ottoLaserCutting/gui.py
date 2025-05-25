@@ -11,7 +11,6 @@ import os
 import dearpygui.dearpygui as dpg
 import win32api, win32con
 from datetime import datetime, timedelta
-from pprint import pprint
 
 dpg.create_context()
 reg = dpg.add_font_registry()
