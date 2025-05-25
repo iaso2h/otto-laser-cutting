@@ -124,9 +124,16 @@ class Monitor:
 
 
     def shutdownOffWorkTime(self, currentTime: datetime):
-        timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
-        timeGetOffWork = timeGetOffWork - timedelta(days=1)
-        timeGoToWork   = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0)
+        midNight = datetime(currentTime.year, currentTime.month, currentTime.day, 0, 0, 0)
+        midNight += timedelta(days=1)
+        if currentTime < midNight:
+            timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
+            timeGoToWork   = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0)
+            timeGoToWork += timedelta(days=1)
+        else:
+            timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
+            timeGetOffWork -= timedelta(days=1)
+            timeGoToWork   = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0)
         if timeGetOffWork <= currentTime <= timeGoToWork:
             self.isRunning = False
             subprocess.call(["shutdown", "-s"])
@@ -203,7 +210,7 @@ class Monitor:
             # Compare with templates
             for name, attrName in (
                 ("paused",     "templatePaused"),
-                ("finished01", "templateFinished01"),
+                ("finished02", "templateFinished02"),
                 ("alert",      "templateAlert"),
                 ("noAlert",    "templateNoAlert"),
             ):
@@ -212,12 +219,11 @@ class Monitor:
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
                     logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
-                    if name == "finished01":
+                    if name == "finished02":
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
                             cutRecord.takeScreenshot(screenshot)
                             logger.info("Cutting session is completed, stop monitoring.")
-                            self.isRunning = False
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
                             self.shutdownOffWorkTime(currentTime)
