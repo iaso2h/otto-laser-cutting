@@ -172,8 +172,13 @@ class Monitor:
                 cursorPosCurrent = hotkey.mouse.position
 
                 if cursorPosLast:
+                    # Increase the count when cursor stays in the same
+                    # position as the last iteration does. Reset the count to
+                    # 0 when the ordinates alter
                     if cursorPosCurrent == cursorPosLast:
-                        cursorIdleCount =+ 1
+                        cursorIdleCount += 1
+                    else:
+                        cursorIdleCount = 0
 
                     # Set to foreground if TubePro is actually running and being idle for over 1 minutes
                     if cursorIdleCount >= 60 // self.checkInterval:
