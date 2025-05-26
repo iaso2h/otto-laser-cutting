@@ -14,6 +14,18 @@ MOUSE_INTERVAL = 0.075
 
 
 def hotkeyAlignTube():
+    """
+    Performs tube alignment automation for TubePro.exe application.
+
+    This function:
+    1. Checks if the foreground window is TubePro.exe
+    2. Captures screen pixels to detect UI state
+    3. Adjusts click positions based on screen orientation
+    4. Simulates mouse clicks to perform alignment sequence
+    5. Restores original mouse position
+
+    Note: Contains commented-out validation logic for laser operation safety checks.
+    """
     hwnd = win32gui.GetForegroundWindow()
     pId = win32process.GetWindowThreadProcessId(hwnd)[1]
     pName = psutil.Process(pId).name()
@@ -79,26 +91,35 @@ def hotkeyAlignTube():
         #     print(f"pausePixel = {pausePixel}")
         #     print(f"continuePixel = {continuePixel}")
         #     print(f"stopPixel = {stopPixel}")
-            # return win32api.MessageBox(
-            #         None,
-            #         "激光机运行时无法进行此操作",
-            #         "Warning",
-            #         4096 + 0 + 16
-            #     )
-            # MB_SYSTEMMODAL==4096
-            # Button Styles:
-            # 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
-            # To also change icon, add these values to previous number
-            # 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+        # return win32api.MessageBox(
+        #         None,
+        #         "激光机运行时无法进行此操作",
+        #         "Warning",
+        #         4096 + 0 + 16
+        #     )
+        # MB_SYSTEMMODAL==4096
+        # Button Styles:
+        # 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+        # To also change icon, add these values to previous number
+        # 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
 
 
 def coordinateEcho():
+    """
+    Displays the current mouse cursor coordinates in a system-modal message box.
+
+    Returns:
+        int: The button ID pressed to close the message box (always 1 for OK in this configuration).
+
+    Note:
+        - Uses MB_SYSTEMMODAL (4096) flag to create a system-modal dialog
+        - Shows information icon (64)
+        - Only displays OK button (0)
+        - Format: "x: [x-coord], y: [y-coord]"
+    """
     return win32api.MessageBox(
-            None,
-            f"x: {mouse.position[0]}, y: {mouse.position[1]}",
-            "Info",
-            4096 + 0 + 64
-        )
+        None, f"x: {mouse.position[0]}, y: {mouse.position[1]}", "Info", 4096 + 0 + 64
+    )
     # MB_SYSTEMMODAL==4096
     # Button Styles:
     # 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
@@ -107,6 +128,14 @@ def coordinateEcho():
 
 
 def onPress(key):
+    """
+    Handles keyboard press events and triggers corresponding hotkey actions.
+    - Detects pressed key and normalizes modifier keys (alt/ctrl/shift)
+    - Maintains a set of currently pressed keys in keySet.keys
+    - Triggers specific functions when hotkey combinations are detected:
+      * alt+a: Calls hotkeyAlignTube()
+      * alt+j: Calls cutRecord.takeScreenshot()
+    """
     if hasattr(key, "char"):
         keyName = key.char
     else:
@@ -131,6 +160,12 @@ def onPress(key):
 
 
 def onRelease(key):
+    """
+    Handles key release events for hotkey management.
+    - Converts key names to standardized modifier names (alt/ctrl/shift)
+    - Removes released key from active key set
+    - Clears key set when all modifiers are released
+    """
     if hasattr(key, "char"):
         keyName = key.char
     else:

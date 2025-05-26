@@ -26,8 +26,18 @@ scheduelTotalPat   = re.compile(r".*零件切割计划数目\d+.*$")
 scheduelLoopEndPat = re.compile(r".*已切割零件数目\d+.*$")
 loopStartPat       = re.compile(r".*开始加工, 循环计数：\d+.*$")
 
+
 def getEncoding(filePath) -> str:
     # Create a magic object
+    """
+    Detects the encoding of a file using chardet.
+
+    Args:
+        filePath (str): Path to the file to analyze.
+
+    Returns:
+        str: Detected encoding as a string (e.g. 'utf-8'), or empty string if detection fails.
+    """
     with open(filePath, "rb") as f:
         # Detect the encoding
         rawData = f.read()
@@ -41,6 +51,24 @@ def getEncoding(filePath) -> str:
 
 
 def fillWorkbook(ws: Worksheet, parsedResult: dict, sortChk: bool):
+    """
+    Fills an Excel worksheet with laser cutting file statistics from parsed data.
+
+    Args:
+        ws (Worksheet): OpenPyXL Worksheet object to populate with data.
+        parsedResult (dict): Dictionary containing parsed laser file information with keys:
+            - loop: List of loop intervals
+            - loopIntervalCounter: Counter object of interval frequencies
+            - loopIntervalUpdated: Dictionary of last update timestamps per interval
+            - workpieceCount: Number of workpieces per file
+        sortChk (bool): Whether to sort the results alphabetically by filename.
+
+    Populates worksheet with:
+        - Headers in row 1 with formatted columns
+        - File statistics grouped by laser filename
+        - Calculated fields for material/time consumption
+        - Cell protection with password '456'
+    """
     ws[f"A{1}"].value = "排样文件"
     ws.column_dimensions["A"].width = 35
     ws[f"B{1}"].value = "循环耗时"
@@ -122,7 +150,6 @@ def fillWorkbook(ws: Worksheet, parsedResult: dict, sortChk: bool):
             ws.cell(row=currentRow, column=9).value = f'=NOW() + H{currentRow}'
             ws.cell(row=currentRow, column=9).number_format = "yyyy-m-d h:mm:ss"
 
-
             if not headlineBorderSet:
                 # Add top border
                 headlineBorderSet = True
@@ -137,7 +164,6 @@ def fillWorkbook(ws: Worksheet, parsedResult: dict, sortChk: bool):
                 ws[f"H{currentRow}"].border = style.borderMedium
                 ws[f"I{currentRow}"].border = style.borderMedium
 
-
             ws.protection.sheet = True
             ws.protection.password = '456'
             ws.protection.enable()
@@ -147,12 +173,36 @@ def parse(
     rtfFile: Path,
     wb: Workbook,
     accumulationMode: bool,
-    parsedResult: Optional[dict] = None
+    parsedResult: Optional[dict] = None,
 ) -> dict:
     """
+    Parses an RTF file containing laser cutting records and organizes the data into a structured format.
+
     Args:
-        parsedResult: If None, a new dictionary will be created.
-                      Provide a dict if you want to accumulate results.
+        rtfFile: Path to the RTF file to parse
+        wb: Workbook object for Excel output (optional, used in non-accumulation mode)
+        accumulationMode: If True, accumulates results without writing to Excel
+        parsedResult: Optional dictionary to accumulate results across multiple files
+
+    Returns:
+        Dictionary containing:
+        - "workbook": Modified Workbook object (None in accumulation mode)
+        - "parsedResult": Dictionary of parsed data with structure:
+            {
+                "laserFileName": {
+                    "open": [(lineIdx, timestamp)],
+                    "loop": [(lineIdx, timestamp, interval)],
+                    "loopIntervalUpdated": {interval: timestamp},
+                    "loopIntervalCounter": Counter(intervals),
+                    "workpieceCount": int
+                }
+            }
+
+    The function processes RTF content to extract:
+    1. Laser file open events with timestamps
+    2. Loop segments with timestamps and intervals
+    3. Workpiece counts
+    4. Statistics on loop intervals
     """
     laserFileLastOpen = ""
     loopLastTime = None
@@ -216,7 +266,6 @@ def parse(
             "parsedResult": None
         }
 
-
     if accumulationMode:
         return {
                 "workbook":     None,
@@ -236,6 +285,13 @@ def parse(
 
 
 def parseAllLog():
+    """
+    Parses all RTF log files in the specified directory (excluding files with '精简' in their names),
+    processes them using the parse() function, and saves the combined results to an Excel workbook.
+
+    Returns:
+        None: Outputs the result to a file rather than returning a value.
+    """
     wb = Workbook()
     for f in Path(TUBEPRO_LOG_PATH).iterdir():
         if f.suffix != ".rtf" or "精简" in f.stem:
@@ -250,6 +306,14 @@ def parseAllLog():
 
 
 def parseAccuLog():
+    """
+    Parses accumulated laser cutting logs from RTF files within the last 60 days.
+    Processes files in TUBEPRO_LOG_PATH (excluding '精简' files), extracts data into a workbook,
+    and saves results to LASER_PROFILE_PATH. Skips hidden column F in output.
+
+    Returns:
+        None: Prints message if no logs found, otherwise saves processed data to file.
+    """
     wb = Workbook()
     parsedResult = None
     now = datetime.datetime.now()
@@ -277,6 +341,17 @@ def parseAccuLog():
 
 
 def parsePeriodLog():
+    """
+    Parses laser cutting log files within a specified time period based on modifier keys.
+    Handles different parsing modes:
+    - Ctrl+Shift+Alt: Parse accumulated logs (calls parseAccuLog)
+    - Ctrl: Open laser profile directly
+    - Shift: Parse logs from last 7 days
+    - Alt: Parse all logs (calls parseAllLog)
+    - No modifier: Parse logs from last 1 day
+    Automatically expands time window (up to 3 attempts) if no logs found.
+    Saves parsed data to laser profile if logs were processed.
+    """
     if "ctrl" in keySet.keys and "shift" in keySet.keys and "alt" in keySet.keys:
         return parseAccuLog()
     elif "ctrl" in keySet.keys:
@@ -317,6 +392,20 @@ def parsePeriodLog():
 
 
 def rtfSimplify():
+    """
+    Processes RTF log files in TUBEPRO_LOG_PATH based on modifier keys:
+    - Ctrl: Opens the log directory
+    - Shift: Processes files from last 7 days
+    - Alt: Processes files from last year
+    - No modifier: Processes files from last day
+
+    For each matching RTF file:
+    1. Filters content using regex patterns (laserFileOpenPat, segmentPat, etc.)
+    2. Creates a simplified version with '精简' prefix in filename
+    3. Outputs processed files with relevant log lines
+
+    Handles cases where no files are found by expanding time window exponentially.
+    """
     if "ctrl" in keySet.keys:
         return os.startfile(TUBEPRO_LOG_PATH)
     elif "shift" in keySet.keys:
@@ -366,4 +455,3 @@ def rtfSimplify():
                 print("导出日志: ", str(targetPath))
 
     print("rtf日志精简完成")
-

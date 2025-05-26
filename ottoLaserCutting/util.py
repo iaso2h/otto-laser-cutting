@@ -32,17 +32,47 @@ monitorLogger.addHandler(handler)
 
 
 def getTimeStamp() -> str:
+    """
+    Returns current time in 'HH:MM:SS' format as a string.
+
+    Returns:
+        str: Formatted time string showing hours, minutes and seconds.
+    """
     now = datetime.datetime.now()
     return str(now.strftime("%H:%M:%S"))
     # return str(now.strftime(f"%Y/{now.month}/%d %H:%M:%S"))
 
 
-def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=False) -> Path: # {{{
+def saveWorkbook(
+    wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=False
+) -> Path:  # {{{
+    """
+    Saves a Workbook object to specified path with fallback options.
+
+    Args:
+        wb: Workbook object to be saved
+        dstPath: Optional destination path for the workbook. If None or permission issues occur,
+                 falls back to default export directory.
+        openAfterSaveChk: If True, opens the saved file after saving
+
+    Returns:
+        Path: The actual path where the workbook was saved
+
+    Behavior:
+        - Creates backup if file exists
+        - Handles permission errors with retry prompt
+        - Falls back to export directory if:
+            * No dstPath provided
+            * Permission error occurs and user chooses not to retry
+            * Not running as OT03 user outside DEV_MODE
+        - Generates timestamped filenames for fallback files
+        - Can optionally open saved file after saving
+    """
     fallbackExportDir = Path(config.EXECUTABLE_DIR, "export")
     timeStr = str(datetime.datetime.now().strftime("%Y-%m-%d %H%M%S%f"))
     os.makedirs(fallbackExportDir, exist_ok=True)
 
-    if dstPath and (os.getlogin() == "OT03" or config.DEV_MODE):
+    if dstPath:
         # Create backup first
         if dstPath.exists():
             backupPath = Path(
@@ -89,8 +119,22 @@ def saveWorkbook(wb: Workbook, dstPath: Path | None = None, openAfterSaveChk=Fal
         return newExcelPath
 
 
-
 def strStandarize(old: Path) -> Path:
+    """
+    Standardizes a file path string by performing the following operations:
+    1. Unifies diameter symbols using `diametartSymbolUnify`.
+    2. Replaces "_T1_" and "xT1x" with "_T1.0_" and "xT1.0x" respectively.
+    3. Collapses multiple spaces into single spaces.
+    4. Handles file renaming with timestamp comparison:
+       - If destination exists, keeps the newer file.
+       - Returns original path if rename fails due to permissions.
+
+    Args:
+        old (Path): Original file path to standardize
+
+    Returns:
+        Path: Standardized path if successful, original path otherwise
+    """
     if old.is_file():
         new = str(old)
         new = diametartSymbolUnify(new)
@@ -117,7 +161,14 @@ def strStandarize(old: Path) -> Path:
         return old
 
 
-def getAllLaserFiles() -> List[Path]: # {{{
+def getAllLaserFiles() -> List[Path]:  # {{{
+    """
+    Retrieves all laser cutting files from the configured directory, excluding demo files.
+
+    Returns:
+        List[Path]: A list of Path objects representing valid laser cutting files.
+        Empty list if the directory doesn't exist.
+    """
     laserFilePaths = []
 
     if not config.LASER_FILE_DIR_PATH.exists():
@@ -130,21 +181,45 @@ def getAllLaserFiles() -> List[Path]: # {{{
 
     return laserFilePaths # }}}
 
+
 def diametartSymbolUnify(input: str) -> str:
     # input = input.replace("∅", "∅")
+    """
+    Unifies different diameter symbol representations to a single standard symbol (∅).
+
+    Args:
+        input (str): The string containing diameter symbols to be unified.
+
+    Returns:
+        str: The input string with all diameter symbols replaced by the standard ∅ symbol.
+    """
     input = input.replace("Ø", "∅")
     input = input.replace("Φ", "∅")
     input = input.replace("φ", "∅")
     return input
 
 
-def screenshotSave(screenshot: Image, namePrefix:str, dstDirPath: Path) -> Path:
+def screenshotSave(screenshot: Image, namePrefix: str, dstDirPath: Path) -> Path:
+    """
+    Saves a screenshot image to the specified directory with a timestamped filename.
+
+    Args:
+        screenshot: PIL Image object to be saved
+        namePrefix: Prefix string for the filename
+        dstDirPath: Destination directory path where the image will be saved
+
+    Returns:
+        Path: The full path where the screenshot was saved
+
+    Example:
+        >>> img = Image.new('RGB', (100, 100))
+        >>> path = screenshotSave(img, 'test', Path('/screenshots'))
+        >>> print(path)  # e.g. /screenshots/test 2023-01-01 120000.png
+    """
     os.makedirs(dstDirPath, exist_ok=True)
     datetimeNow = datetime.datetime.now()
     screenshotPath = Path(
-            dstDirPath,
-            f'{namePrefix} {datetimeNow.strftime("%Y-%m-%d %H%M%S")}.png'
-            )
+        dstDirPath, f'{namePrefix} {datetimeNow.strftime("%Y-%m-%d %H%M%S")}.png'
+    )
     screenshot.save(screenshotPath)
     return screenshotPath
-

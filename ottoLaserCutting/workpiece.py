@@ -23,11 +23,33 @@ from decimal import Decimal
 WORKPIECE_INFO_PATH = Path(cfg.paths.otto, r"存档/零件规格总览.xlsx")
 WORKPIECE_DICT = Path(cfg.paths.otto, r"辅助程序/workpieceDict.json")
 
+
 def bankRound(precision: float, digitLiteral: str) -> float:
-    return float(Decimal(digitLiteral).quantize(Decimal(precision), rounding = "ROUND_HALF_UP"))
+    """
+    Rounds a decimal number using banker's rounding (ROUND_HALF_UP) to the specified precision.
+
+    Args:
+        precision: The decimal precision to round to (e.g. 0.01 for 2 decimal places)
+        digitLiteral: The number to round, provided as a string to avoid floating-point precision issues
+
+    Returns:
+        The rounded number as a float
+    """
+    return float(
+        Decimal(digitLiteral).quantize(Decimal(precision), rounding="ROUND_HALF_UP")
+    )
 
 
 def removeDummyLaserFile(p: Path) -> None:
+    """
+    Removes a dummy laser file if it meets specific criteria.
+
+    Args:
+        p (Path): Path object representing the file to be checked and removed.
+
+    The function checks if the file has no suffix and zero size. If both conditions
+    are met, it attempts to remove the file silently (ignores any removal errors).
+    """
     if p.suffix == "" and p.stat().st_size == 0:
         try:
             os.remove(p)
@@ -36,6 +58,14 @@ def removeDummyLaserFile(p: Path) -> None:
 
 
 def workpieceNamingVerification():
+    """
+    Verifies laser cutting workpiece file names against naming conventions.
+    Checks all files in LASER_FILE_DIR_PATH:
+    1. If Ctrl key is pressed, opens file explorer at the directory
+    2. Otherwise scans for .zx/.zzx files and validates their names against cfg.patterns.laserFile
+    3. Prints either validation results or "All files match" message
+    Returns: subprocess.Popen object if Ctrl pressed, None otherwise
+    """
     if "ctrl" in keySet.keys:
         return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
     laserFilePaths = util.getAllLaserFiles()
@@ -54,7 +84,24 @@ def workpieceNamingVerification():
     if not invalidFilePathFoundChk:
         print("没有不规范的工件名称")
 
+
 def removeRedundantLaserFile() -> None:
+    """
+    Removes redundant laser files from the configured directory.
+
+    This function scans the LASER_FILE_DIR_PATH for .zx files that have a corresponding
+    .zzx file with a newer modification time. Such files are considered redundant and
+    are deleted. If the 'ctrl' key is pressed, it opens the directory in Explorer instead.
+
+    Displays a summary of deleted files via console and a system message box.
+    Returns None.
+
+    Behavior:
+    - Skips files containing 'demo' in their name (case-insensitive)
+    - Only processes files when LASER_FILE_DIR_PATH exists
+    - Shows deletion count and list of deleted files
+    - Uses MB_SYSTEMMODAL (4096) + MB_ICONINFORMATION (64) for the message box
+    """
     if "ctrl" in keySet.keys:
         return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
     rawLaserFile = []
@@ -87,18 +134,37 @@ def removeRedundantLaserFile() -> None:
                     "Info",
                     4096 + 64 + 0
                 )
-                #   MB_SYSTEMMODAL==4096
-                ##  Button Styles:
-                ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
-                ##  To also change icon, add these values to previous number
-                ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+        #   MB_SYSTEMMODAL==4096
+        ##  Button Styles:
+        ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+        ##  To also change icon, add these values to previous number
+        ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
     else:
         print("No redundant .zx files")
 
 
-
-
 def exportDimensions():
+    """
+    Exports workpiece dimensions to Excel files with formatting and calculations.
+
+    Generates two Excel files:
+    1. WORKPIECE_INFO_PATH: Detailed workpiece specifications
+    2. "零件规格总览.xlsx": Summary overview in warehousing directory
+
+    Features:
+    - Automatic dimension calculations
+    - Formatting for laser-cut parts
+    - Area overrides from workpieceDict
+    - Table formatting with striped rows
+    - Automatic timestamping
+    - Protection against duplicate entries
+
+    Handles special cases:
+    - Laser cutting machine files (.zx/.zzx)
+    - Welding combinations
+    - Various tube types (main tube, handle tube, etc.)
+    - Area calculation overrides
+    """
     dstPath1 = WORKPIECE_INFO_PATH
     dstPath2 = Path(cfg.paths.warehousing, "零件规格总览.xlsx")
     boldFont = Font(bold=True)
@@ -317,11 +383,7 @@ def exportDimensions():
                 ws[f"H{rowMax}"].value = f'=IF(ISNUMBER(MATCH("{overrideVal}", B:B, 0)), INDEX(H:H, MATCH("{overrideVal}", B:B, 0)), IF(ISNUMBER(MATCH("{overrideVal}", A:A, 0)), INDEX(H:H, MATCH("{overrideVal}", A:A, 0)), ""))'
                 print(f"area of {querryKey} is linked to {areaOverride[querryKey]}")
 
-
             ws[f"H{rowMax}"].number_format = "0.0000"
-
-
-
 
     # Add table
     tab = Table(displayName="Table1", ref=f"A2:I{ws.max_row}")
@@ -332,7 +394,6 @@ def exportDimensions():
     ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
     ws.print_title_rows = "2:2"
     ws.print_area = f"A2:I{ws.max_row}"
-
 
     # Add a default style with striped rows and banded columns
     style = TableStyleInfo(

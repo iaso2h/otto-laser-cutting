@@ -15,6 +15,7 @@ import easyocr
 import json
 from PIL import Image, ImageFilter, ImageGrab
 from openpyxl import Workbook, load_workbook
+from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from typing import Optional
 from pathlib import Path
@@ -24,7 +25,15 @@ CUT_RECORD_PATH     = Path(cfg.paths.otto, r"存档/开料记录.xlsx")
 LASER_OCR_FIX_PATH  = Path(cfg.paths.otto, r"辅助程序/激光名称OCR修复规则.json")
 MESSAGEBOX_TITLE = "激光开料"
 
-def getWorkbook() -> None:
+
+def getWorkbook() -> Workbook:
+    """
+    Loads or creates an Excel workbook for cut records.
+
+    Returns:
+        openpyxl.Workbook: Existing workbook if CUT_RECORD_PATH exists,
+                           otherwise a new Workbook instance.
+    """
     if CUT_RECORD_PATH.exists():
         return load_workbook(str(CUT_RECORD_PATH))
     else:
@@ -32,7 +41,27 @@ def getWorkbook() -> None:
 
 
 screenshotPaths = []
-def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
+
+
+def initSheetFromScreenshots(wb: Workbook) -> None:  # {{{
+    """
+    Initializes workbook sheets from screenshot files.
+
+    Scans the screenshot directory for PNG files with specific dimensions (1080x1920).
+    For each unique year-month prefix found in screenshot filenames, creates a new sheet
+    in the workbook with standard headers if it doesn't already exist.
+
+    Args:
+        wb (Workbook): The Excel workbook to initialize sheets in.
+
+    The created sheets will have columns for:
+    - Layout file
+    - Completion time
+    - Order number
+    - Model (quantity)
+    - Cut/required quantity
+    - Screenshot file
+    """
     yearMonthPrefix = []
     sheetNames = wb.sheetnames
     for p in SCREENSHOT_DIR_PATH.iterdir():
@@ -58,7 +87,29 @@ def initSheetFromScreenshots(wb: Workbook) -> None: # {{{
             ws["F1"].value = "截图文件" # }}}
 
 
-def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
+def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
+    """
+    Takes a screenshot and records cutting information in an Excel file.
+
+    This function handles screenshot capture and logging of laser cutting operations:
+    1. Checks for modifier keys (Ctrl/Shift) to trigger alternative actions
+    2. Identifies the active TubePro window to get part filename
+    3. Captures screen if no image is provided
+    4. Saves screenshot and records metadata (timestamp, filename) in Excel
+    5. Shows success notification
+
+    Args:
+        screenshot: Optional pre-captured image to use instead of grabbing new screenshot
+
+    Returns:
+        None: Opens the record file or performs relinking based on key modifiers,
+              otherwise shows success message
+
+    Note:
+        - Requires TubePro.exe to be running for normal operation
+        - Maintains Excel records with specific columns (A1-F1 headers)
+        - Copies records to shared location when not running on OT03 machine
+    """
     if "ctrl" in keySet.keys:
         return os.startfile(CUT_RECORD_PATH)
     elif "shfit" in keySet.keys:
@@ -91,9 +142,13 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
     if not partFileName:
         return print("Screenshot taking is abort due to TubePro is not running.")
 
-
     if not screenshot:
         screenshot = ImageGrab.grab()
+        print(screenshot)
+        print(123)
+    else:
+        print(screenshot)
+        print(124)
 
     # Check current foreground program
     datetimeNow = datetime.datetime.now()
@@ -126,14 +181,37 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
                 MESSAGEBOX_TITLE,
                 4096 + 64 + 0
             )
-            #   MB_SYSTEMMODAL==4096
-            ##  Button Styles:
-            ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
-            ##  To also change icon, add these values to previous number
-            ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+    #   MB_SYSTEMMODAL==4096
+    ##  Button Styles:
+    ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+    ##  To also change icon, add these values to previous number
+    ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+
+
 # }}}
 
-def getImgInfo(p:Path) -> None: # {{{
+
+def getImgInfo(p: Path) -> None:  # {{{
+    """
+    Extracts and processes text information from an image file using OCR.
+
+    Args:
+        p (Path): Path to the image file to process.
+
+    Returns:
+        tuple: A 3-tuple containing:
+            - partFileName (str): Extracted and cleaned filename from image title
+            - partProcessCount (str): Extracted process count from image
+            - timeStamp (str): Extracted and formatted timestamp from image
+
+    The function performs the following operations:
+    1. Crops specific regions of interest from the image (title, process count, timestamp)
+    2. Checks for completion status via pixel color detection
+    3. Uses EasyOCR to extract text from image regions
+    4. Applies text cleaning and pattern substitutions
+    5. Handles different timestamp formats based on completion status
+    6. Removes illegal characters from all extracted text fields
+    """
     reader = easyocr.Reader(["ch_sim", "en"])
 
     with Image.open(p) as img:
@@ -176,12 +254,10 @@ def getImgInfo(p:Path) -> None: # {{{
                 pattern = re.compile(key, re.IGNORECASE)
                 partFileName = pattern.sub(val, partFileName)
 
-
     if processCountRead:
         if len(processCountRead) == 2:
             # In case recognition result is 2
             partProcessCount = processCountRead[1][1]
-
 
     if timeStampRead:
         timeStamp = timeStampRead[len(timeStampRead) - 1][1]
@@ -205,14 +281,43 @@ def getImgInfo(p:Path) -> None: # {{{
     return partFileName, partProcessCount, timeStamp # }}}
 
 
-def validScreenshotPath(cell): # {{{
-    if not cell.value or not isinstance(cell.value, str) or not Path(cell.value).exists():
+def validScreenshotPath(cell):  # {{{
+    """
+    Check if a cell contains a valid screenshot file path.
+
+    Args:
+        cell: The cell object to validate, expected to have a 'value' attribute.
+
+    Returns:
+        bool: True if the cell value is a string and points to an existing file, False otherwise.
+    """
+    if (
+        not cell.value
+        or not isinstance(cell.value, str)
+        or not Path(cell.value).exists()
+    ):
         return False
     else:
         return True # }}}
 
 
-def newRecord(ws, p, partFileName=None, timeStamp=None):
+def newRecord(ws: Worksheet, p: str, partFileName: Optional[str]=None, timeStamp: Optional[str]=None):
+    """
+    Creates a new record in the worksheet with part processing information.
+
+    Args:
+        ws (Worksheet): The worksheet to add the record to
+        p (str): Path to the image file containing processing data
+        partFileName (str, optional): Name of the part file. If not provided, extracted from image.
+        timeStamp (str, optional): Timestamp of processing. If not provided, extracted from image.
+
+    The function either uses provided partFileName/timeStamp or extracts them from the image.
+    Extracts process count from image using OCR when needed. Adds a new row with:
+    - Part filename (column A)
+    - Timestamp (column B, formatted)
+    - Process count (column E, as text)
+    - Hyperlink to image (column F)
+    """
     if not partFileName or not timeStamp:
         partFileName, partProcessCount, timeStamp = getImgInfo(p)
     else:
@@ -237,7 +342,20 @@ def newRecord(ws, p, partFileName=None, timeStamp=None):
     ws[f"F{rowNew}"].hyperlink = str(p)
 
 
-def updateScreenshotRecords(): # {{{
+def updateScreenshotRecords():  # {{{
+    """
+    Updates the screenshot records in the workbook by comparing timestamps.
+    For each screenshot path, checks if it's newer than the last recorded screenshot
+    in the corresponding worksheet. If newer or if worksheet is empty, adds a new record.
+    Saves the updated workbook to CUT_RECORD_PATH.
+
+    Args:
+        None (uses module-level variables: screenshotPaths, CUT_RECORD_PATH)
+
+    Effects:
+        Modifies the workbook by adding new records when appropriate
+        Saves the workbook to CUT_RECORD_PATH
+    """
     wb = getWorkbook()
     initSheetFromScreenshots(wb)
     for p in screenshotPaths:
@@ -266,7 +384,6 @@ def updateScreenshotRecords(): # {{{
                     rowMax = rowMax - 1
                     continue
 
-
             if not lastDatetime:
                 newRecord(ws, p)
             else:
@@ -282,6 +399,16 @@ def updateScreenshotRecords(): # {{{
 
 
 def relinkScreenshots():
+    """
+    Relinks screenshot hyperlinks in the cut record workbook.
+
+    This function checks each cell in the worksheet for valid screenshot paths and updates
+    the hyperlinks in column F. It skips empty rows and invalid paths. When multiple paths
+    are found in a cell (separated by newlines), it uses the last one. Only existing .png
+    files are processed.
+
+    Note: Requires 'ctrl' key in keySet to execute the file opening operation.
+    """
     if "ctrl" in keySet.keys:
         return os.startfile(CUT_RECORD_PATH)
     # TODO: highlight invalid ones

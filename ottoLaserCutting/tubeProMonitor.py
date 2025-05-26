@@ -30,18 +30,32 @@ MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
 logger = util.monitorLogger
 monitor = None
 
+
 class Monitor:
     def __init__(self):
+        """
+        Initializes the TubeProMonitor instance with default values for monitoring state and templates.
+        Attributes:
+            isRunning (bool): Indicates if monitoring is active.
+            lastAlertTimeStamp (float): Timestamp of last alert.
+            checkInterval (int): Seconds between monitoring checks.
+            checkCount (int): Number of checks performed.
+            programNotFoundRetry (int): Seconds to wait before retrying after program not found.
+            alertCooldown (int): Minimum seconds between alerts.
+            alertHaltThreshold (int): Max alerts before halting monitoring.
+            alertCount (int): Current alert count.
+            similarityThreshold (float): Image similarity threshold for detection.
+            enabled (bool): Whether monitoring is enabled.
+            template* (Optional[MatLike]): Image templates for various monitoring states.
+        """
         self.isRunning = False
-        self.templateHeight = 0
-        self.templateWidth = 0
         self.lastAlertTimeStamp = 0.0
         self.checkInterval = 3
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
-        self.alertShutdonwThreshold = 3
-        self.alertShutdownCount = 0
+        self.alertHaltThreshold = 3
+        self.alertCount = 0
         self.similarityThreshold = 0.9
         self.enabled = True
         self.templateRunning = None
@@ -61,19 +75,29 @@ class Monitor:
         # self.templateAlertForceReturn: Optional[MatLike] = None
         # self.templateNoAlert:          Optional[MatLike] = None
 
-
     def loadTemplates(self) -> None:
-        """Set up different Opencv templates"""
+        """
+        Loads and validates OpenCV template images for monitoring tube processing states.
+
+        This method:
+        1. Defines a list of required template images with their corresponding attribute names.
+        2. Checks if each template file exists in the specified directory (PIC_TEMPLATE).
+        3. Attempts to load valid images using OpenCV, storing them as instance attributes.
+        4. Sets 'enabled' flag to False and returns early if any template is missing or invalid.
+
+        The loaded templates will be available as instance attributes with the specified names.
+        Raises no exceptions but prints error messages for missing/invalid templates.
+        """
         # Check existences of all templates
         templates = [
-            ("templateRunning",                "running.png"),
-            ("templatePaused",                 "paused.png"),
+            ("templateRunning", "running.png"),
+            ("templatePaused", "paused.png"),
             ("templatePausedCuttingHeadTouch", "pausedWithCuttingHeadTouch.png"),
-            ("templateFinished01",             "finished01.png"),
-            ("templateFinished02",             "finished02.png"),
-            ("templateAlert",                  "alert.png"),
-            ("templateAlertForceReturn",       "alertForceReturn.png"),
-            ("templateNoAlert",                "noAlert.png")
+            ("templateFinished01", "finished01.png"),
+            ("templateFinished02", "finished02.png"),
+            ("templateAlert", "alert.png"),
+            ("templateAlertForceReturn", "alertForceReturn.png"),
+            ("templateNoAlert", "noAlert.png"),
         ]
         for attrName, fileName in templates:
             p = Path(PIC_TEMPLATE, fileName)
@@ -92,15 +116,30 @@ class Monitor:
                     self.enabled = False
                     return
 
-
-
     def startMonitoring(self) -> None:
+        """
+        Starts the monitoring process in a separate daemon thread if enabled.
+        Prints status messages and returns immediately if monitoring is disabled.
+        """
+        if not self.enabled:
+            return print(
+                "Monitoring is not enabled due to missing or invalid templates."
+            )
         self.isRunning = True
         print("Monitoring started.")
         threading.Thread(target=self._monitor_loop, daemon=True).start()
 
-
     def stopMonitoring(self) -> None:
+        """Stops the monitoring process if it's currently running.
+        
+        Displays a confirmation dialog asking whether to stop monitoring.
+        Only works when monitoring is enabled (valid templates exist).
+        
+        Returns:
+            None: Prints status messages but doesn't return any value.
+        """
+        if not self.enabled:
+            return print("Monitoring is not enabled due to missing or invalid templates.")
         self.isRunning = False
         ans = win32api.MessageBox(
                     None,
@@ -108,24 +147,37 @@ class Monitor:
                     "监视询问",
                     4096 + 64 + 4
                 )
-                #   MB_SYSTEMMODAL==4096
-                ##  Button Styles:
-                ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
-                ##  To also change icon, add these values to previous number
-                ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+        #   MB_SYSTEMMODAL==4096
+        ##  Button Styles:
+        ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+        ##  To also change icon, add these values to previous number
+        ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
         if ans == win32con.IDYES:
             print("Monitoring stopped.")
 
-
     def toggleMonitoring(self) -> None:
+        """
+        Toggles the monitoring state. If monitoring is running, stops it; otherwise starts it.
+        """
         if self.isRunning:
             self.stopMonitoring()
         else:
             self.startMonitoring()
 
-
     def shutdownOffWorkTime(self, currentTime: datetime):
-        midNight = datetime(currentTime.year, currentTime.month, currentTime.day, 0, 0, 0)
+        """
+        Shuts down the machine during off-work hours (21:00 to next day 07:00).
+        If current time falls within this period, sets isRunning flag to False and initiates system shutdown.
+
+        Args:
+            currentTime (datetime): The current datetime to check against work hours.
+
+        Logs:
+            Info message indicating whether shutdown was triggered or not.
+        """
+        midNight = datetime(
+            currentTime.year, currentTime.month, currentTime.day, 0, 0, 0
+        )
         midNight += timedelta(days=1)
         if currentTime < midNight:
             timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
@@ -138,13 +190,21 @@ class Monitor:
         if timeGetOffWork <= currentTime <= timeGoToWork:
             self.isRunning = False
             subprocess.call(["shutdown", "-s"])
-            logger.info("Currently it's off work time, shutdown the machine.")
+            logger.info("Currently it's off-work hours, shutdown the machine.")
         else:
             logger.info("Currently it's work time, no plan for shutdown.")
 
-
-
     def _monitor_loop(self) -> None:
+        """
+        Monitors the TubePro application window for specific states (paused, finished, alerts) and performs automated actions:
+        - Brings TubePro to foreground if idle for too long
+        - Captures screenshots and matches against templates to detect states
+        - Handles different states:
+            - On 'finished': saves screenshot and sends notification
+            - On 'paused': auto-clicks continue button if not a head touch error
+            - On alerts: stops monitoring and saves screenshot
+        - Maintains counters for idle detection and alert cooldowns
+        """
         cursorPosLast = None
         cursorPosCurrent = None
         cursorIdleCount = 0
@@ -172,7 +232,7 @@ class Monitor:
             foregroundProcessId = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             foregroundProcessName = psutil.Process(foregroundProcessId).name()
             if foregroundProcessName != "TubePro.exe":
-                logger.info(f"TubePro isn't the foreground window.")
+                logger.info("TubePro isn't the foreground window.")
                 cursorPosCurrent = hotkey.mouse.position
 
                 if cursorPosLast:
@@ -195,10 +255,9 @@ class Monitor:
                                     if win32gui.IsIconic(hwnd):
                                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                                     win32gui.SetForegroundWindow(hwnd)
-                                    logger.info(f"TubePro has been idle for too long and now it's being brought to the foreground window")
+                                    logger.info("TubePro has been idle for too long and now it's been brought to the foreground window")
                             elif title == cutRecord.MESSAGEBOX_TITLE:
                                 ctypes.windll.user32.PostMessageW(hwnd, win32con.WM_CLOSE, 0, 0)
-
 
                         cursorIdleCount = 0 # reset
 
@@ -211,7 +270,7 @@ class Monitor:
             # Capture window content from TubePro
             screenshot = captureWindow(-1)
             if screenshot is None:
-                logger.info(f"Caputre image failed")
+                logger.info("Caputre image failed")
                 continue
 
             # Convert to OpenCV format
@@ -233,7 +292,8 @@ class Monitor:
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
                             cutRecord.takeScreenshot(screenshot)
-                            logger.info("Cutting session is completed, stop monitoring.")
+                            logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+                            emailNotify.send(f'Cutting session "{tubeProTitleCurrent}" is completed')
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
                             self.shutdownOffWorkTime(currentTime)
@@ -247,7 +307,7 @@ class Monitor:
                             matchResultPausedCuttingHeadTouch
                         )
                         if maxValPausedCuttingHeadTouch < self.similarityThreshold:
-                            self.alertShutdownCount += 1
+                            self.alertCount += 1
                             self.lastAlertTimeStamp = currentTime.timestamp()
                             if (
                                 (
@@ -257,17 +317,18 @@ class Monitor:
                                         )
                                     < self.alertCooldown
                                 )
-                                and self.alertShutdownCount
-                                >= self.alertShutdonwThreshold
+                                and self.alertCount
+                                >= self.alertHaltThreshold
                             ):
-                                print(f"Stop monitoring due to {self.alertShutdownCount} times fail in {self.alertCooldown}s")
+                                print(f"Stop monitoring due to {self.alertCount} times fail in {self.alertCooldown}s")
                                 self.isRunning = False
-                                self.alertShutdownCount = 0
+                                self.alertCount = 0
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                 self.shutdownOffWorkTime(currentTime)
                             else:
-                                print(f"Cutting is paused, auto-click continue.")
+                                print("Cutting is paused, auto-click continue.")
                                 util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
+                                emailNotify.send("Cutting is paused, auto-click continue.")
                                 savedPosition = copy.copy(hotkey.mouse.position)
                                 time.sleep(5)
                                 hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
@@ -308,9 +369,13 @@ class Monitor:
                             self.alertShutdonwCount = 0
                             logger.info("Clear alert count reseted. Back to the track")
 
-
-
     def checkTemplateMatches(self):
+        """
+        Checks if the current window screenshot matches any of the predefined templates.
+        Compares the screenshot against multiple templates using OpenCV's template matching.
+        Prints matching scores for each template and collects matches above similarity threshold.
+        Returns None if screenshot capture fails.
+        """
         screenshot = captureWindow(-1)
         if screenshot is None:
             print(f"Caputre image failed")
@@ -351,9 +416,19 @@ class Monitor:
         #     cv2.destroyAllWindows()
 
 
-
 def captureWindow(hwnd):
-    """Capture window content using Pillow."""
+    """
+    Captures the content of a specified window or the entire screen if no window is specified.
+
+    Args:
+        hwnd: The handle to the window to capture. If -1, captures the entire screen.
+
+    Returns:
+        PIL.Image.Image: The captured image as a Pillow Image object, or None if an error occurs.
+
+    Raises:
+        Prints any exception that occurs during capture but does not raise it.
+    """
     if hwnd != -1:
         try:
             left, top, right, bottom = win32gui.GetWindowRect(hwnd)
