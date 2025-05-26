@@ -1,4 +1,3 @@
-from util import pr
 import config
 import rtfParse
 import hotkey

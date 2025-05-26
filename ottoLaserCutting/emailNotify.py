@@ -1,5 +1,4 @@
 from config import cfg
-from util import pr
 import smtplib, ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText

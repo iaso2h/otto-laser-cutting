@@ -238,7 +238,7 @@ class Monitor:
             foregroundProcessId = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             foregroundProcessName = psutil.Process(foregroundProcessId).name()
             if foregroundProcessName != "TubePro.exe":
-                pr("TubePro isn't the foreground window.", gui=True)
+                pr("TubePro isn't the foreground window.", gui=False)
                 logger.warning("TubePro isn't the foreground window.")
                 cursorPosCurrent = hotkey.mouse.position
 
@@ -294,7 +294,7 @@ class Monitor:
                 if maxVal >= self.similarityThreshold:
                     pr(f"Matched {name} with {maxVal * 100:.2f}% similarity.", gui=False)
                     logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
-                    if name == "finished02":
+                    if name == "finished02": # {{{
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
 
@@ -329,7 +329,9 @@ class Monitor:
                             if completionIdleCount >= 60 and self.checkInterval == self.checkIntervalNormal:
                                 self.checkIntervalNormal = self.checkIntervalLong
 
-                    elif name == "paused":
+                        break
+                    # }}}
+                    elif name == "paused": # {{{
                         matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templatePausedCuttingHeadTouch,
@@ -371,7 +373,10 @@ class Monitor:
                                 hotkey.mouse.press(hotkey.Button.left)
                                 hotkey.mouse.release(hotkey.Button.left)
                                 hotkey.mouse.position = savedPosition
-                    elif name == "alert":
+
+                        break
+                    # }}}
+                    elif name == "alert": # {{{
                         matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,
@@ -397,7 +402,10 @@ class Monitor:
                                 self.checkInterval = self.checkIntervalLong
                             screenshotPath = util.screenshotSave(screenshot, "alert", MONITOR_PIC)
                             emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
-                    elif name == "noAlert":
+
+                        break
+                    # }}}
+                    elif name == "noAlert": # {{{
                         matchResultRunning = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,
@@ -414,6 +422,9 @@ class Monitor:
 
                             if self.checkInterval != self.checkIntervalNormal:
                                 self.checkInterval = self.checkIntervalNormal
+
+                        break
+                    # }}}
 
     def checkTemplateMatches(self):
         """
