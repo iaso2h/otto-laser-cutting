@@ -213,6 +213,7 @@ class Monitor:
         cursorPosLast = None
         cursorPosCurrent = None
         cursorIdleCount = 0
+        completionIdleCount = 0
         currentTime = datetime.now()
         tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
@@ -324,7 +325,8 @@ class Monitor:
                             # Check off-work hours and shutdown if necessary
                             self.offWorkShutdownChk(currentTime)
                         else:
-                            if self.checkInterval == self.checkIntervalNormal:
+                            completionIdleCount += 1
+                            if completionIdleCount >= 60 and self.checkInterval == self.checkIntervalNormal:
                                 self.checkIntervalNormal = self.checkIntervalLong
 
                     elif name == "paused":
@@ -408,11 +410,10 @@ class Monitor:
                                 pr("Alert cleared. Back to the track")
                                 logger.info("Alert cleared. Back to the track")
 
+                            completionIdleCount = 0
+
                             if self.checkInterval != self.checkIntervalNormal:
                                 self.checkInterval = self.checkIntervalNormal
-                        else:
-                            if self.checkInterval == self.checkIntervalNormal:
-                                self.checkInterval = self.checkIntervalLong
 
     def checkTemplateMatches(self):
         """
