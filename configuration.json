@@ -19,6 +19,6 @@
         "smtpServer": "",
         "senderAccount": "",
         "senderPassword": "",
-        "recieverAccount": ""
+        "receiverAccounts": [""]
     }
 }

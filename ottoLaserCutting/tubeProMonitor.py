@@ -297,9 +297,6 @@ class Monitor:
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
 
-                            # Send email notification
-                            emailNotify.send(f'Cutting session "{tubeProTitleCurrent}" is completed')
-
                             pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
                             logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
 
@@ -318,7 +315,11 @@ class Monitor:
 
                             # Make records for monitoring
                             os.makedirs(MONITOR_PIC, exist_ok=True)
-                            util.screenshotSave(screenshot, name, MONITOR_PIC)
+                            screenshotPath = util.screenshotSave(screenshot, name, MONITOR_PIC)
+
+                            # Send email notification
+                            emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
+
 
                             # Check off-work hours and shutdown if necessary
                             self.offWorkShutdownChk(currentTime)
@@ -338,6 +339,8 @@ class Monitor:
                         if maxValPausedCuttingHeadTouch < self.similarityThreshold:
                             self.alertCount += 1
                             self.lastAlertTimeStamp = currentTime.timestamp()
+                            name = "pauseThenContinue"
+
                             if (
                                 (
                                     int(
@@ -358,8 +361,8 @@ class Monitor:
                             else:
                                 pr("Cutting is paused, auto-click continue.")
                                 logger.info("Cutting is paused, auto-click continue.")
-                                util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
-                                emailNotify.send("Cutting is paused, auto-click continue.")
+                                screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
+                                emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
                                 savedPosition = copy.copy(hotkey.mouse.position)
                                 time.sleep(5)
                                 hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
@@ -376,19 +379,22 @@ class Monitor:
                             matchResultAlertForceReturn
                         )
                         if maxValAlertForceReturn >= self.similarityThreshold:
+                            name = "alertForceReturn"
                             # TODO: cut down the tube
                             pr("Force return is detected.")
                             logger.warning("Force return is detected.")
-                            emailNotify.send("Force return is detected.")
                             if self.checkInterval == self.checkIntervalNormal:
                                 self.checkInterval = self.checkIntervalLong
-                            util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
+                            screenshotPath = util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
+                            emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
                         else:
                             pr("Alert is detected.")
                             logger.warning("Alert is detected.")
+                            emailNotify.send(name, tubeProTitleCurrent)
                             if self.checkInterval == self.checkIntervalNormal:
                                 self.checkInterval = self.checkIntervalLong
-                            util.screenshotSave(screenshot, "alert", MONITOR_PIC)
+                            screenshotPath = util.screenshotSave(screenshot, "alert", MONITOR_PIC)
+                            emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
                     elif name == "noAlert":
                         matchResultRunning = cv2.matchTemplate( # type: ignore
                             screenshotCV,

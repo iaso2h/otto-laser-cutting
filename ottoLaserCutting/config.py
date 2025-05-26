@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.124"
+VERSION     = "0.0.125"
 LASTUPDATED = "2025-05-26"
 
 import sys
@@ -48,7 +48,7 @@ class Email:
     smtpServer: str
     senderAccount: str
     senderPassword: str
-    recieverAccount: str
+    receiverAccounts: list[str]
 
 @dataclass
 class Configuration:
