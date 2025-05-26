@@ -6,6 +6,7 @@ import keySet
 
 import shutil
 import datetime
+import time
 import os
 import re
 import numpy
@@ -41,6 +42,19 @@ def getWorkbook() -> Workbook:
 
 
 screenshotPaths = []
+
+def findMessageBoxWindow() -> Optional[int]:
+    startTime = time.time()
+    timeout = 5  # seconds
+    while time.time() - startTime < timeout:
+        hwnd = win32gui.FindWindow(None, MESSAGEBOX_TITLE)
+        if hwnd != 0:
+            return hwnd
+        time.sleep(1)  # Poll every 1 seconds
+    return None
+
+# Wait for the message box to appear
+messageBoxHwnd = findMessageBoxWindow()
 
 
 def initSheetFromScreenshots(wb: Workbook) -> None:  # {{{

@@ -131,10 +131,10 @@ class Monitor:
 
     def stopMonitoring(self) -> None:
         """Stops the monitoring process if it's currently running.
-        
+
         Displays a confirmation dialog asking whether to stop monitoring.
         Only works when monitoring is enabled (valid templates exist).
-        
+
         Returns:
             None: Prints status messages but doesn't return any value.
         """
@@ -164,7 +164,7 @@ class Monitor:
         else:
             self.startMonitoring()
 
-    def shutdownOffWorkTime(self, currentTime: datetime):
+    def offWorkShutdownChk(self, currentTime: datetime):
         """
         Shuts down the machine during off-work hours (21:00 to next day 07:00).
         If current time falls within this period, sets isRunning flag to False and initiates system shutdown.
@@ -256,10 +256,9 @@ class Monitor:
                                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                                     win32gui.SetForegroundWindow(hwnd)
                                     logger.info("TubePro has been idle for too long and now it's been brought to the foreground window")
-                            elif title == cutRecord.MESSAGEBOX_TITLE:
-                                ctypes.windll.user32.PostMessageW(hwnd, win32con.WM_CLOSE, 0, 0)
+                                    cursorIdleCount = 0 # reset
+                                break
 
-                        cursorIdleCount = 0 # reset
 
                 cursorPosLast = cursorPosCurrent
                 continue
@@ -291,12 +290,28 @@ class Monitor:
                     if name == "finished02":
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
-                            cutRecord.takeScreenshot(screenshot)
                             logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+                            # `win32api.MessageBox` inside `takeScreenshot()`
+                            # is a blocking call—it halts the thread so we need
+                            # to make sure it call in a new thread then
+                            # complete thread after 5 seconds
+                            curRecordThread = threading.Thread(target=lambda _: cutRecord.takeScreenshot(screenshot))
+                            curRecordThread.start()
+                            messageBoxHwnd = cutRecord.findMessageBoxWindow()
+                            if messageBoxHwnd:
+                                ctypes.windll.user32.PostMessageW(messageBoxHwnd, win32con.WM_CLOSE, 0, 0)
+                            time.sleep(5)
+                            curRecordThread.join() # Ensure the thread completes
+
+                            # Send email notification
                             emailNotify.send(f'Cutting session "{tubeProTitleCurrent}" is completed')
+
+                            # Make record for monitoring
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
-                            self.shutdownOffWorkTime(currentTime)
+
+                            # Check off-work hours and shutdown if neccessary
+                            self.offWorkShutdownChk(currentTime)
                     elif name == "paused":
                         matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
                             screenshotCV,
@@ -324,7 +339,7 @@ class Monitor:
                                 self.isRunning = False
                                 self.alertCount = 0
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
-                                self.shutdownOffWorkTime(currentTime)
+                                self.offWorkShutdownChk(currentTime)
                             else:
                                 print("Cutting is paused, auto-click continue.")
                                 util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
