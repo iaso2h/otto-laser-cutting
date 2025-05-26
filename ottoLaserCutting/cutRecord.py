@@ -9,7 +9,10 @@ import datetime
 import os
 import re
 import numpy
-import win32api, win32con
+import win32api, win32con, win32gui, win32process
+import psutil
+import easyocr
+import json
 from PIL import Image, ImageFilter, ImageGrab
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
@@ -60,9 +63,6 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
         return os.startfile(CUT_RECORD_PATH)
     elif "shfit" in keySet.keys:
         return relinkScreenshots()
-    import win32gui
-    import win32process
-    import psutil
 
     # Get laser file info
     hwndTitles = {}
@@ -134,8 +134,6 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
 # }}}
 
 def getImgInfo(p:Path) -> None: # {{{
-    import easyocr
-    import json
     reader = easyocr.Reader(["ch_sim", "en"])
 
     with Image.open(p) as img:
@@ -218,7 +216,6 @@ def newRecord(ws, p, partFileName=None, timeStamp=None):
     if not partFileName or not timeStamp:
         partFileName, partProcessCount, timeStamp = getImgInfo(p)
     else:
-        import easyocr
         reader = easyocr.Reader(["en"])
         partProcessCount = ""
         with Image.open(p) as img:
