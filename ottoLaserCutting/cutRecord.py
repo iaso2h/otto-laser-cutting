@@ -144,11 +144,6 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
 
     if not screenshot:
         screenshot = ImageGrab.grab()
-        print(screenshot)
-        print(123)
-    else:
-        print(screenshot)
-        print(124)
 
     # Check current foreground program
     datetimeNow = datetime.datetime.now()

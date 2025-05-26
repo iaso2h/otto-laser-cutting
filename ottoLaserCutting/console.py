@@ -1,5 +1,5 @@
 import dearpygui.dearpygui as dpg
-logFlow = ""
+logFlow = []
 
 
 def print(*args, **kwargs):
@@ -13,8 +13,5 @@ def print(*args, **kwargs):
     """
 
     global logFlow
-    if logFlow == "":
-        logFlow = "\n".join(args) + "\n"
-    else:
-        logFlow = logFlow + "\n".join(args) + "\n"
-    dpg.set_value("log", value=logFlow)
+    logFlow.append("\n".join(args))
+    dpg.set_value("log", value="\n".join(logFlow))
