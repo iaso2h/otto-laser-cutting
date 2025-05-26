@@ -267,6 +267,7 @@ class Monitor:
                                     cursorIdleCount = 0 # reset
                                 break
 
+
                 cursorPosLast = cursorPosCurrent
                 continue
             else:
@@ -340,7 +341,7 @@ class Monitor:
                         _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(
                             matchResultPausedCuttingHeadTouch
                         )
-                        if maxValPausedCuttingHeadTouch < self.similarityThreshold:
+                        if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
                             self.alertCount += 1
                             self.lastAlertTimeStamp = currentTime.timestamp()
                             name = "pauseThenContinue"
@@ -377,6 +378,7 @@ class Monitor:
                         break
                     # }}}
                     elif name == "alert": # {{{
+                        self.lastAlertTimeStamp = currentTime.timestamp()
                         matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,

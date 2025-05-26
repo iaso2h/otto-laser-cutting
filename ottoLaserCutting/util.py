@@ -49,8 +49,9 @@ def pr(*args, gui: bool=True):
     global logFlow
     logFlow.append("\n".join(args))
     message = "\n".join(logFlow)
-    dpg.set_value("log", value=message)
-    if gui and not config.BUNDLE_MODE:
+    if not gui:
+        dpg.set_value("log", value=message)
+    if not config.BUNDLE_MODE:
         pprint(*args)
 
 
