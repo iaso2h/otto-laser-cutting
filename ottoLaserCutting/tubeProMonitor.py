@@ -54,6 +54,7 @@ class Monitor:
         self.templateNoAlert = None
         # self.templateRunning:          Optional[MatLike] = None
         # self.templatePaused:           Optional[MatLike] = None
+        # self.templatePausedCuttingHeadTouch:           Optional[MatLike] = None
         # self.templateFinished01:       Optional[MatLike] = None
         # self.templateFinished02:       Optional[MatLike] = None
         # self.templateAlert:            Optional[MatLike] = None
@@ -137,6 +138,9 @@ class Monitor:
         if timeGetOffWork <= currentTime <= timeGoToWork:
             self.isRunning = False
             subprocess.call(["shutdown", "-s"])
+            logger.info("Currently it's off work time, shutdown the machine.")
+        else:
+            logger.info("Currently it's work time, no plan for shutdown.")
 
 
 
@@ -234,7 +238,7 @@ class Monitor:
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
                             self.shutdownOffWorkTime(currentTime)
                     elif name == "paused":
-                        matchResultPausedCuttingHeadTouch = cv2.matchTemplate(
+                        matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templatePausedCuttingHeadTouch,
                             cv2.TM_CCOEFF_NORMED
@@ -242,7 +246,7 @@ class Monitor:
                         _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(
                             matchResultPausedCuttingHeadTouch
                         )
-                        if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
+                        if maxValPausedCuttingHeadTouch < self.similarityThreshold:
                             self.alertShutdownCount += 1
                             self.lastAlertTimeStamp = currentTime.timestamp()
                             if (
@@ -261,17 +265,17 @@ class Monitor:
                                 self.alertShutdownCount = 0
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                 self.shutdownOffWorkTime(currentTime)
-                                break
                             else:
                                 print(f"Cutting is paused, auto-click continue.")
                                 util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
                                 savedPosition = copy.copy(hotkey.mouse.position)
+                                time.sleep(5)
                                 hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
                                 hotkey.mouse.press(hotkey.Button.left)
                                 hotkey.mouse.release(hotkey.Button.left)
                                 hotkey.mouse.position = savedPosition
                     elif name == "alert":
-                        matchResultAlertForceReturn = cv2.matchTemplate(
+                        matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,
                             cv2.TM_CCOEFF_NORMED
@@ -285,14 +289,12 @@ class Monitor:
                             emailNotify.send("Force return is detected, stop monitoring.")
                             self.isRunning = False
                             util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
-                            break
                         else:
                             logger.info("Alert is detected, stop monitoring.")
                             self.isRunning = False
                             util.screenshotSave(screenshot, "alert", MONITOR_PIC)
-                            break
                     elif name == "noAlert":
-                        matchResultRunning = cv2.matchTemplate(
+                        matchResultRunning = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,
                             cv2.TM_CCOEFF_NORMED
@@ -306,7 +308,6 @@ class Monitor:
                             self.alertShutdonwCount = 0
                             logger.info("Clear alert count reseted. Back to the track")
 
-                        break
 
 
     def checkTemplateMatches(self):
