@@ -9,7 +9,7 @@ import datetime
 import os
 import re
 import numpy
-import win32api
+import win32api, win32con
 from PIL import Image, ImageFilter, ImageGrab
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
@@ -83,7 +83,8 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
             if pName == "TubePro.exe":
                 partFileName = re.sub(r"^TubePro(\(.+?\))? (.+\.zzx).*?$", r"\2", title, re.IGNORECASE)
 
-                win32gui.ShowWindow(hwnd, 5)
+                if win32gui.IsIconic(hwnd):
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 win32gui.SetForegroundWindow(hwnd)
                 break
 
@@ -94,7 +95,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None: # {{{
     if not screenshot:
         screenshot = ImageGrab.grab()
 
-    # Check current forground program
+    # Check current foreground program
     datetimeNow = datetime.datetime.now()
     excelTimeStamp = datetimeNow.strftime("%Y/%m/%d %H:%M:%S")
     screenshotPath = util.screenshotSave(screenshot, "屏幕截图", SCREENSHOT_DIR_PATH)

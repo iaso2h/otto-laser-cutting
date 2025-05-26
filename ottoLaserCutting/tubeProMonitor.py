@@ -188,7 +188,8 @@ class Monitor:
                                 pName = psutil.Process(pId).name()
                                 if pName == "TubePro.exe":
                                     tubeProTitleCurrent = title
-                                    win32gui.ShowWindow(hwnd, 5)
+                                    if win32gui.IsIconic(hwnd):
+                                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                                     win32gui.SetForegroundWindow(hwnd)
                                     logger.info(f"TubePro has been idle for too long and now it's being brought to the foreground window")
                             elif title == cutRecord.MESSAGEBOX_TITLE:
