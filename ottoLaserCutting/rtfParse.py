@@ -1,6 +1,5 @@
 import util
 from config import cfg
-from console import print
 import keySet
 import style
 
@@ -17,6 +16,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Protection
 from pprint import pprint
 
+pr = util.pr
 LASER_PROFILE_PATH = Path(cfg.paths.otto, r"存档/耗时计算.xlsx")
 TUBEPRO_LOG_PATH   = Path(cfg.paths.otto, r"存档/切割机日志")
 laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
@@ -260,7 +260,7 @@ def parse(
                 parsedResult[laserFileLastOpen]["workpieceCount"] = int(loopStartMatch.group(2))
 
     if not parsedResult:
-        print(f"No laser file records parsed from rtf file {str(rtfFile)}")
+        pr(f"No laser file records parsed from rtf file {str(rtfFile)}")
         return {
             "workbook":     None,
             "parsedResult": None
@@ -333,7 +333,7 @@ def parseAccuLog():
                 parsedResult=parsedResult
                     )["parsedResult"] # type: ignore
     if not parsedResult:
-        return print("No parsed accumulated result")
+        return pr("No parsed accumulated result")
 
     fillWorkbook(wb.active, parsedResult, True) # type: ignore
     wb.active.column_dimensions['F'].hidden = True #type: ignore
@@ -452,6 +452,6 @@ def rtfSimplify():
                 with open(targetPath, mode="w", encoding="utf-8") as f2:
                     for line in refineLines:
                         f2.write(line)
-                print("导出日志: ", str(targetPath))
+                pr("导出日志: ", str(targetPath))
 
-    print("rtf日志精简完成")
+    pr("rtf日志精简完成")

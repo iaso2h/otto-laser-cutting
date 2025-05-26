@@ -1,4 +1,4 @@
-from console import print
+from util import pr
 import config
 import rtfParse
 import hotkey
@@ -12,7 +12,6 @@ if __name__ == "__main__":
     argParser.add_argument("-D", "--dev", action="store_true")
     argParser.add_argument("-R", "--rtf", action="store_true")
     args = argParser.parse_args()
-    config.DEV_MODE = args.dev
 
     if args.rtf:
         rtfParse.parseAllLog()

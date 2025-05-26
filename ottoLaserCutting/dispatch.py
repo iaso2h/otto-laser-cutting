@@ -1,7 +1,7 @@
 import config
 from config import cfg
 import util
-from  console import print
+from  console import pr
 
 import re
 import copy
@@ -113,7 +113,7 @@ def fillPartInfo(): # {{{
     wb = load_workbook(str(DISPATCH_FILE_PATH))
     laserFilePaths = util.getAllLaserFiles()
     if not laserFilePaths:
-        print(f"No laser files found in: {str(config.LASER_FILE_DIR_PATH)}")
+        pr(f"No laser files found in: {str(config.LASER_FILE_DIR_PATH)}")
         raise SystemExit(1)
 
 

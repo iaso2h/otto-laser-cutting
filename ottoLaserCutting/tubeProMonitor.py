@@ -3,7 +3,6 @@ from config import cfg
 import util
 import cutRecord
 import hotkey
-from console import print
 import emailNotify
 
 import time
@@ -27,6 +26,7 @@ if config.BUNDLE_MODE:
 else:
     PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
 MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
+pr = util.pr
 logger = util.monitorLogger
 monitor = None
 
@@ -50,7 +50,9 @@ class Monitor:
         """
         self.isRunning = False
         self.lastAlertTimeStamp = 0.0
-        self.checkInterval = 3
+        self.checkIntervalNormal = 3
+        self.checkIntervalLong  = 180
+        self.checkInterval = self.checkIntervalNormal
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
@@ -102,7 +104,8 @@ class Monitor:
         for attrName, fileName in templates:
             p = Path(PIC_TEMPLATE, fileName)
             if not p.exists():
-                print(f"Cannot find template: {p}")
+                pr(f"Cannot find template: {p}")
+                logger.error(f"Cannot find template: {p}")
                 self.enabled = False
                 return
             else:
@@ -112,7 +115,8 @@ class Monitor:
                         raise FileNotFoundError(f"Template image not found at {p}")
                     setattr(self, attrName, template)
                 except Exception as e:
-                    print(f"Error loading template image: {e}")
+                    pr(f"Error loading template image: {e}")
+                    logger.error(f"Error loading template image: {e}")
                     self.enabled = False
                     return
 
@@ -121,12 +125,9 @@ class Monitor:
         Starts the monitoring process in a separate daemon thread if enabled.
         Prints status messages and returns immediately if monitoring is disabled.
         """
-        if not self.enabled:
-            return print(
-                "Monitoring is not enabled due to missing or invalid templates."
-            )
         self.isRunning = True
-        print("Monitoring started.")
+        pr("Monitoring started.")
+        logger.info("Monitoring started.")
         threading.Thread(target=self._monitor_loop, daemon=True).start()
 
     def stopMonitoring(self) -> None:
@@ -138,8 +139,6 @@ class Monitor:
         Returns:
             None: Prints status messages but doesn't return any value.
         """
-        if not self.enabled:
-            return print("Monitoring is not enabled due to missing or invalid templates.")
         self.isRunning = False
         ans = win32api.MessageBox(
                     None,
@@ -153,12 +152,17 @@ class Monitor:
         ##  To also change icon, add these values to previous number
         ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
         if ans == win32con.IDYES:
-            print("Monitoring stopped.")
+            pr("Monitoring stopped.")
+            logger.info("Monitoring stopped.")
 
     def toggleMonitoring(self) -> None:
         """
         Toggles the monitoring state. If monitoring is running, stops it; otherwise starts it.
         """
+        if not self.enabled:
+            pr("Monitoring is unavailable due to missing or invalid templates.")
+            logger.info("Monitoring is unavailable due to missing or invalid templates.")
+            return
         if self.isRunning:
             self.stopMonitoring()
         else:
@@ -190,20 +194,21 @@ class Monitor:
         if timeGetOffWork <= currentTime <= timeGoToWork:
             self.isRunning = False
             subprocess.call(["shutdown", "-s"])
-            logger.info("Currently it's off-work hours, shutdown the machine.")
-        else:
-            logger.info("Currently it's work time, no plan for shutdown.")
+            pr("Currently it's off-work hours, shutdown the machine.")
+            logger.warning("Currently it's off-work hours, shutdown the machine.")
 
     def _monitor_loop(self) -> None:
         """
-        Monitors the TubePro application window for specific states (paused, finished, alerts) and performs automated actions:
-        - Brings TubePro to foreground if idle for too long
-        - Captures screenshots and matches against templates to detect states
-        - Handles different states:
-            - On 'finished': saves screenshot and sends notification
-            - On 'paused': auto-clicks continue button if not a head touch error
-            - On alerts: stops monitoring and saves screenshot
-        - Maintains counters for idle detection and alert cooldowns
+        Monitors the TubePro application window and performs actions based on its state.
+
+        This function continuously checks:
+        - If TubePro is the foreground window
+        - Mouse cursor idle time (brings TubePro to foreground if idle too long)
+        - Matches window content against templates to detect states (paused, finished, alerts)
+        - Takes appropriate actions for each state (screenshots, notifications, auto-clicks)
+        - Handles error conditions and cooldowns
+
+        The loop runs at intervals defined by self.checkInterval and stops when self.isRunning is False.
         """
         cursorPosLast = None
         cursorPosCurrent = None
@@ -216,7 +221,7 @@ class Monitor:
             time.sleep(self.checkInterval)
             self.checkCount += 1
 
-            logger.info("")
+            pr(f"Monitoring for the {self.checkCount} times...")
             logger.info(f"Monitoring for the {self.checkCount} times...")
 
             hwndTitles = {}
@@ -232,7 +237,8 @@ class Monitor:
             foregroundProcessId = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             foregroundProcessName = psutil.Process(foregroundProcessId).name()
             if foregroundProcessName != "TubePro.exe":
-                logger.info("TubePro isn't the foreground window.")
+                pr("TubePro isn't the foreground window.", gui=True)
+                logger.warning("TubePro isn't the foreground window.")
                 cursorPosCurrent = hotkey.mouse.position
 
                 if cursorPosLast:
@@ -255,10 +261,10 @@ class Monitor:
                                     if win32gui.IsIconic(hwnd):
                                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                                     win32gui.SetForegroundWindow(hwnd)
+                                    pr("TubePro has been idle for too long and now it's been brought to the foreground window")
                                     logger.info("TubePro has been idle for too long and now it's been brought to the foreground window")
                                     cursorIdleCount = 0 # reset
                                 break
-
 
                 cursorPosLast = cursorPosCurrent
                 continue
@@ -269,7 +275,6 @@ class Monitor:
             # Capture window content from TubePro
             screenshot = captureWindow(-1)
             if screenshot is None:
-                logger.info("Caputre image failed")
                 continue
 
             # Convert to OpenCV format
@@ -286,32 +291,41 @@ class Monitor:
                 matchResult = cv2.matchTemplate(screenshotCV, template, cv2.TM_CCOEFF_NORMED)
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
+                    pr(f"Matched {name} with {maxVal * 100:.2f}% similarity.", gui=False)
                     logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
                     if name == "finished02":
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
-                            logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
-                            # `win32api.MessageBox` inside `takeScreenshot()`
-                            # is a blocking call—it halts the thread so we need
-                            # to make sure it call in a new thread then
-                            # complete thread after 5 seconds
-                            curRecordThread = threading.Thread(target=lambda _: cutRecord.takeScreenshot(screenshot))
-                            curRecordThread.start()
-                            messageBoxHwnd = cutRecord.findMessageBoxWindow()
-                            if messageBoxHwnd:
-                                ctypes.windll.user32.PostMessageW(messageBoxHwnd, win32con.WM_CLOSE, 0, 0)
-                            time.sleep(5)
-                            curRecordThread.join() # Ensure the thread completes
 
                             # Send email notification
                             emailNotify.send(f'Cutting session "{tubeProTitleCurrent}" is completed')
 
-                            # Make record for monitoring
+                            pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+                            logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+
+                            # `win32api.MessageBox` inside `takeScreenshot()`
+                            # is a blocking call—it halts the thread so we need
+                            # to make sure it call in a new thread then
+                            # complete thread after 5 seconds
+                            curRecordThread = threading.Thread(target=lambda: cutRecord.takeScreenshot(screenshot))
+                            curRecordThread.start()
+                            messageBoxHwnd = cutRecord.findMessageBoxWindow()
+                            if messageBoxHwnd:
+                                time.sleep(5)
+                                ctypes.windll.user32.PostMessageW(messageBoxHwnd, win32con.WM_CLOSE, 0, 0)
+
+                            curRecordThread.join() # Ensure the thread completes
+
+                            # Make records for monitoring
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             util.screenshotSave(screenshot, name, MONITOR_PIC)
 
-                            # Check off-work hours and shutdown if neccessary
+                            # Check off-work hours and shutdown if necessary
                             self.offWorkShutdownChk(currentTime)
+                        else:
+                            if self.checkInterval == self.checkIntervalNormal:
+                                self.checkIntervalNormal = self.checkIntervalLong
+
                     elif name == "paused":
                         matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
                             screenshotCV,
@@ -332,16 +346,18 @@ class Monitor:
                                         )
                                     < self.alertCooldown
                                 )
-                                and self.alertCount
+                                or self.alertCount
                                 >= self.alertHaltThreshold
                             ):
-                                print(f"Stop monitoring due to {self.alertCount} times fail in {self.alertCooldown}s")
-                                self.isRunning = False
-                                self.alertCount = 0
+                                pr(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                if self.checkInterval == self.checkIntervalNormal:
+                                    self.checkInterval = self.checkIntervalLong
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                 self.offWorkShutdownChk(currentTime)
                             else:
-                                print("Cutting is paused, auto-click continue.")
+                                pr("Cutting is paused, auto-click continue.")
+                                logger.info("Cutting is paused, auto-click continue.")
                                 util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
                                 emailNotify.send("Cutting is paused, auto-click continue.")
                                 savedPosition = copy.copy(hotkey.mouse.position)
@@ -361,13 +377,17 @@ class Monitor:
                         )
                         if maxValAlertForceReturn >= self.similarityThreshold:
                             # TODO: cut down the tube
-                            logger.info("Force return is detected, stop monitoring.")
-                            emailNotify.send("Force return is detected, stop monitoring.")
-                            self.isRunning = False
+                            pr("Force return is detected.")
+                            logger.warning("Force return is detected.")
+                            emailNotify.send("Force return is detected.")
+                            if self.checkInterval == self.checkIntervalNormal:
+                                self.checkInterval = self.checkIntervalLong
                             util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
                         else:
-                            logger.info("Alert is detected, stop monitoring.")
-                            self.isRunning = False
+                            pr("Alert is detected.")
+                            logger.warning("Alert is detected.")
+                            if self.checkInterval == self.checkIntervalNormal:
+                                self.checkInterval = self.checkIntervalLong
                             util.screenshotSave(screenshot, "alert", MONITOR_PIC)
                     elif name == "noAlert":
                         matchResultRunning = cv2.matchTemplate( # type: ignore
@@ -375,14 +395,18 @@ class Monitor:
                             self.templateAlertForceReturn,
                             cv2.TM_CCOEFF_NORMED
                         )
-                        _, maxValAlertRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
-                        if (
-                            maxValAlertRunning >= self.similarityThreshold
-                            and self.alertShutdonwCount
-                            and (currentTime.timestamp() - self.lastAlertTimeStamp >= self.alertCooldown)
-                        ):
-                            self.alertShutdonwCount = 0
-                            logger.info("Clear alert count reseted. Back to the track")
+                        _, maxValRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
+                        if maxValRunning >= self.similarityThreshold:
+                            if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp >= self.alertCooldown):
+                                self.alertCount = 0
+                                pr("Alert cleared. Back to the track")
+                                logger.info("Alert cleared. Back to the track")
+
+                            if self.checkInterval != self.checkIntervalNormal:
+                                self.checkInterval = self.checkIntervalNormal
+                        else:
+                            if self.checkInterval == self.checkIntervalNormal:
+                                self.checkInterval = self.checkIntervalLong
 
     def checkTemplateMatches(self):
         """
@@ -393,7 +417,8 @@ class Monitor:
         """
         screenshot = captureWindow(-1)
         if screenshot is None:
-            print(f"Caputre image failed")
+            pr(f"Caputre image failed")
+            logger.info(f"Caputre image failed")
             return
 
         # Convert to OpenCV format
@@ -417,7 +442,8 @@ class Monitor:
             template = getattr(self, attrName)
             matchResult = cv2.matchTemplate(screenshotCVUint8, template, cv2.TM_CCOEFF_NORMED)
             _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
-            print(f"{name}: {maxVal}")
+            pr(f"{name}: {maxVal}")
+            logger.info(f"{name}: {maxVal}")
             if maxVal >= self.similarityThreshold:
                 templateWidth, templateHeight = template.shape[:2]
                 matchResults.append((maxVal, maxLoc, templateWidth, templateHeight))
@@ -449,7 +475,8 @@ def captureWindow(hwnd):
             left, top, right, bottom = win32gui.GetWindowRect(hwnd)
             return ImageGrab.grab(bbox=(left, top, right, bottom))
         except Exception as e:
-            print(f"Error capturing window: {e}")
+            pr(f"Error capturing window: {e}")
+            logger.warning(f"Error capturing window: {e}")
             return None
     else:
         return ImageGrab.grab()

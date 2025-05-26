@@ -1,7 +1,5 @@
 import config
-from console import print
 import util
-import shutil
 import keySet
 import subprocess
 from config import cfg
@@ -20,6 +18,7 @@ from openpyxl.styles.numbers import BUILTIN_FORMATS
 # https://openpyxl.readthedocs.io/en/3.1.3/_modules/openpyxl/styles/numbers.html
 from decimal import Decimal
 
+pr = util.pr
 WORKPIECE_INFO_PATH = Path(cfg.paths.otto, r"存档/零件规格总览.xlsx")
 WORKPIECE_DICT = Path(cfg.paths.otto, r"辅助程序/workpieceDict.json")
 
@@ -70,7 +69,7 @@ def workpieceNamingVerification():
         return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
     laserFilePaths = util.getAllLaserFiles()
     if not laserFilePaths:
-        print("All files match the naming convention!")
+        pr("All files match the naming convention!")
     invalidFilePathFoundChk = False
     for _, p in enumerate(laserFilePaths):
         if p.suffix == ".zx" or p.suffix == ".zzx":
@@ -80,9 +79,9 @@ def workpieceNamingVerification():
                     )
             if not fileNameMatch:
                 invalidFilePathFoundChk = True
-                print(f'------------------------\n({_}): "{p.stem}"')
+                pr(f'------------------------\n({_}): "{p.stem}"')
     if not invalidFilePathFoundChk:
-        print("没有不规范的工件名称")
+        pr("没有不规范的工件名称")
 
 
 def removeRedundantLaserFile() -> None:
@@ -125,9 +124,9 @@ def removeRedundantLaserFile() -> None:
                 pass
 
     if len(pDeletedStr) > 0:
-        print(f"{len(pDeletedStr)} redundant .zx files has been deleted:")
+        pr(f"{len(pDeletedStr)} redundant .zx files has been deleted:")
         for pStr in pDeletedStr:
-            print(pStr)
+            pr(pStr)
         win32api.MessageBox(
                     None,
                     f"{len(pDeletedStr)}个冗余文件已经被删除",
@@ -140,7 +139,7 @@ def removeRedundantLaserFile() -> None:
         ##  To also change icon, add these values to previous number
         ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
     else:
-        print("No redundant .zx files")
+        pr("No redundant .zx files")
 
 
 def exportDimensions():
@@ -370,9 +369,9 @@ def exportDimensions():
 
             if isinstance(overrideVal, float):
                 if ws[f"H{rowMax}"].value and surfaceAreaEval:
-                    print(f"Override area for {querryKey} with {areaOverride[querryKey]} instead of {surfaceAreaEval}")
+                    pr(f"Override area for {querryKey} with {areaOverride[querryKey]} instead of {surfaceAreaEval}")
                 else:
-                    print(f"Override area for {querryKey} with {areaOverride[querryKey]}")
+                    pr(f"Override area for {querryKey} with {areaOverride[querryKey]}")
 
                 ws[f"H{rowMax}"].value = areaOverride[querryKey]
             elif isinstance(overrideVal, list):
@@ -381,7 +380,7 @@ def exportDimensions():
                 ws[f"H{rowMax}"].value = f"=SUMPRODUCT(SUMIF($B:$B,TEXTSPLIT($I{rowMax},CHAR(10)),$H:$H))+SUMPRODUCT(SUMIF($A:$A,TEXTSPLIT($I{rowMax},CHAR(10)),$H:$H))"
             elif isinstance(overrideVal, str):
                 ws[f"H{rowMax}"].value = f'=IF(ISNUMBER(MATCH("{overrideVal}", B:B, 0)), INDEX(H:H, MATCH("{overrideVal}", B:B, 0)), IF(ISNUMBER(MATCH("{overrideVal}", A:A, 0)), INDEX(H:H, MATCH("{overrideVal}", A:A, 0)), ""))'
-                print(f"area of {querryKey} is linked to {areaOverride[querryKey]}")
+                pr(f"area of {querryKey} is linked to {areaOverride[querryKey]}")
 
             ws[f"H{rowMax}"].number_format = "0.0000"
 

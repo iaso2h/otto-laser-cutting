@@ -2,12 +2,15 @@ import config
 from config import cfg
 
 import os
+import traceback
 import shutil
 import datetime
 import win32api, win32con
 import re
 import logging
+import dearpygui.dearpygui as dpg
 from logging.handlers import RotatingFileHandler
+from pprint import pprint
 from pathlib import Path
 from openpyxl import Workbook
 from typing import List
@@ -18,7 +21,7 @@ MONITOR_LOG_PATH = Path(cfg.paths.otto, r"存档/切割机监视.log")
 # Logging set up
 handler = RotatingFileHandler(
     MONITOR_LOG_PATH, # type: ignore
-    maxBytes=5 * 1024 * 1024,  # 5 MB
+    maxBytes=15 * 1024 * 1024,  # 5 MB
     backupCount=3,
     encoding="utf-8",
 )
@@ -29,6 +32,26 @@ handler.setFormatter(
 monitorLogger = logging.getLogger("tubeProMonitor")
 monitorLogger.setLevel(logging.INFO)
 monitorLogger.addHandler(handler)
+
+logFlow = []
+
+
+def pr(*args, gui: bool=True):
+    """
+    Custom print function that redirects output to a Dear PyGui log window.
+    Maintains a global log buffer (logFlow) and updates the GUI log display.
+
+    Args:
+        *args: Strings to be printed (will be joined with newlines).
+        **kwargs: Unused, maintained for print() signature compatibility,
+    """
+
+    global logFlow
+    logFlow.append("\n".join(args))
+    message = "\n".join(logFlow)
+    dpg.set_value("log", value=message)
+    if gui and not config.BUNDLE_MODE:
+        pprint(*args)
 
 
 def getTimeStamp() -> str:

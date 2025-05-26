@@ -1,5 +1,5 @@
 import subprocess
-import console
+import util
 import config
 from config import cfg
 import cutRecord
@@ -45,7 +45,7 @@ with dpg.window(
     with dpg.group(horizontal=True, horizontal_spacing=60):
         dpg.add_text(f"编程: 阮焕")
         with dpg.tooltip(dpg.last_item()):
-            dpg.add_text(f"OS User Name: {loginName}\nDev Mode: {config.DEV_MODE}")
+            dpg.add_text(f"OS User Name: {loginName}")
         dpg.add_text(f"最后更新: {config.LASTUPDATED}")
     dpg.add_separator(label="开料")
     with dpg.group(horizontal=True):
@@ -65,7 +65,7 @@ with dpg.window(
         dpg.add_button(label="匹配检测", callback=tubeProMonitor.monitor.checkTemplateMatches)
     dpg.add_input_text(
         multiline=True,
-        default_value=console.logFlow,
+        default_value=util.logFlow,
         tab_input=True,
         tracked=False,
         width=cfg.geometry.width - 30,
@@ -75,8 +75,8 @@ with dpg.window(
         no_horizontal_scroll=False,
     )
     def clearLog():
-        console.logFlow = ""
-        dpg.set_value("log", value=console.logFlow)
+        util.logFlow = ""
+        dpg.set_value("log", value=util.logFlow)
 
     with dpg.group(horizontal=True):
         dpg.add_button(label="退出", callback=dpg.destroy_context)

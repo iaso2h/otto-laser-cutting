@@ -1,5 +1,5 @@
 import util
-from console import print
+from util import pr
 from config import cfg
 
 import keySet
@@ -25,7 +25,7 @@ SCREENSHOT_DIR_PATH = Path(cfg.paths.otto, r"存档/截图")
 CUT_RECORD_PATH     = Path(cfg.paths.otto, r"存档/开料记录.xlsx")
 LASER_OCR_FIX_PATH  = Path(cfg.paths.otto, r"辅助程序/激光名称OCR修复规则.json")
 MESSAGEBOX_TITLE = "激光开料"
-
+pr = util.pr
 
 def getWorkbook() -> Workbook:
     """
@@ -44,6 +44,7 @@ def getWorkbook() -> Workbook:
 screenshotPaths = []
 
 def findMessageBoxWindow() -> Optional[int]:
+    print("Finding prompted window")
     startTime = time.time()
     timeout = 5  # seconds
     while time.time() - startTime < timeout:
@@ -52,9 +53,6 @@ def findMessageBoxWindow() -> Optional[int]:
             return hwnd
         time.sleep(1)  # Poll every 1 seconds
     return None
-
-# Wait for the message box to appear
-messageBoxHwnd = findMessageBoxWindow()
 
 
 def initSheetFromScreenshots(wb: Workbook) -> None:  # {{{
@@ -154,7 +152,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
                 break
 
     if not partFileName:
-        return print("Screenshot taking is abort due to TubePro is not running.")
+        return pr("Screenshot taking is abort due to TubePro is not running.")
 
     if not screenshot:
         screenshot = ImageGrab.grab()

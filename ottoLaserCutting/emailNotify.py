@@ -1,5 +1,5 @@
 from config import cfg
-from console import print
+from util import pr
 import smtplib, ssl
 
 sslPort        = cfg.email.sslPort
@@ -22,9 +22,9 @@ def send(message: str):
         If any credential is missing, the function will exit silently.
     """
     if not all((smtp_server, receiver_email, sender_email, password)):
-        return print("Email notification not configured. Check configuration file.")
+        return pr("Email notification hasn't configured. Please check configuration file.")
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL(smtp_server, sslPort, context=context) as server:
         server.login(sender_email, password)
         server.sendmail(sender_email, receiver_email, message)
-    print(f"Sent email to{receiver_email}")
+    pr(f"Sent email to{receiver_email}")
