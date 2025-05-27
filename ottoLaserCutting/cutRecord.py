@@ -18,7 +18,7 @@ from PIL import Image, ImageFilter, ImageGrab
 from openpyxl import Workbook, load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-from typing import Optional
+from typing import Optional, Tuple
 from pathlib import Path
 
 SCREENSHOT_DIR_PATH = Path(cfg.paths.otto, r"存档/截图")
@@ -196,7 +196,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
 # }}}
 
 
-def getImgInfo(p: Path) -> None:  # {{{
+def getImgInfo(p: Path) -> Tuple[str, str, str]:  # {{{
     """
     Extracts and processes text information from an image file using OCR.
 
@@ -245,7 +245,7 @@ def getImgInfo(p: Path) -> None:  # {{{
     timeStampRead = reader.readtext(cvTimeStamp)
     partFileName = ""
     partProcessCount = ""
-    timeStamp = p.stem[5:] # Default time stamp
+    timeStamp = p.stem[5:] # Default timestamp
     if titleRead:
         for text in titleRead:
             partFileName = partFileName + " " + text[1]
@@ -306,7 +306,7 @@ def validScreenshotPath(cell):  # {{{
         return True # }}}
 
 
-def newRecord(ws: Worksheet, p: str, partFileName: Optional[str]=None, timeStamp: Optional[str]=None):
+def newRecord(ws: Worksheet, p: Path, partFileName: Optional[str]=None, timeStamp: Optional[str]=None):
     """
     Creates a new record in the worksheet with part processing information.
 
@@ -328,7 +328,7 @@ def newRecord(ws: Worksheet, p: str, partFileName: Optional[str]=None, timeStamp
     else:
         reader = easyocr.Reader(["en"])
         partProcessCount = ""
-        with Image.open(p) as img:
+        with Image.open(str(p)) as img:
             imgProcessCount = img.crop((550, 1665, 765, 1685))
             cvProcessCount = numpy.array(imgProcessCount)[:, :, ::-1].copy()
             processCountRead = reader.readtext(cvProcessCount)

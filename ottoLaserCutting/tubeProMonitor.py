@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import os
 import ctypes
 import subprocess
-from typing import Optional
+from typing import Optional, cast
 import cv2
 # from cv2.typing import MatLike
 import numpy as np
@@ -76,7 +76,7 @@ class Monitor:
         self.templateAlert = None
         self.templateAlertForceReturn = None
         self.templateNoAlert = None
-        self.logger: Optional[logging.Logger] = None
+        self.logger = cast(logging.Logger, None)
         # self.templateRunning:          Optional[MatLike] = None
         # self.templatePaused:           Optional[MatLike] = None
         # self.templatePausedCuttingHeadTouch:           Optional[MatLike] = None
@@ -318,7 +318,7 @@ class Monitor:
                 continue
 
             # Capture window content from TubePro
-            screenshot = captureWindow(-1)
+            screenshot = self.captureWindow(-1)
             if screenshot is None:
                 continue
 
@@ -337,7 +337,7 @@ class Monitor:
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
                     pr(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.", gui=False)
-                    logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
+                    self.logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
                     if stateName == "completion02": # {{{
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
@@ -439,10 +439,10 @@ class Monitor:
                                 stateName = "alertForceReturn"
                                 # TODO: cut down the tube
                                 pr("Force return is detected.")
-                                logger.warning("Force return is detected.")
+                                self.logger.warning("Force return is detected.")
                             else:
                                 pr("Alert is detected.")
-                                logger.warning("Alert is detected.")
+                                self.logger.warning("Alert is detected.")
 
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
@@ -480,7 +480,7 @@ class Monitor:
         Prints matching scores for each template and collects matches above similarity threshold.
         Returns None if screenshot capture fails.
         """
-        screenshot = captureWindow(-1)
+        screenshot = self.captureWindow(-1)
         if screenshot is None:
             pr(f"Caputre image failed")
             self.logger.info(f"Caputre image failed")
@@ -522,26 +522,26 @@ class Monitor:
         #     cv2.destroyAllWindows()
 
 
-def captureWindow(hwnd):
-    """
-    Captures the content of a specified window or the entire screen if no window is specified.
+    def captureWindow(self, hwnd):
+        """
+        Captures the content of a specified window or the entire screen if no window is specified.
 
-    Args:
-        hwnd: The handle to the window to capture. If -1, captures the entire screen.
+        Args:
+            hwnd: The handle to the window to capture. If -1, captures the entire screen.
 
-    Returns:
-        PIL.Image.Image: The captured image as a Pillow Image object, or None if an error occurs.
+        Returns:
+            PIL.Image.Image: The captured image as a Pillow Image object, or None if an error occurs.
 
-    Raises:
-        Prints any exception that occurs during capture but does not raise it.
-    """
-    if hwnd != -1:
-        try:
-            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-            return ImageGrab.grab(bbox=(left, top, right, bottom))
-        except Exception as e:
-            pr(f"Error capturing window: {e}")
-            self.logger.warning(f"Error capturing window: {e}")
-            return None
-    else:
-        return ImageGrab.grab()
+        Raises:
+            Prints any exception that occurs during capture but does not raise it.
+        """
+        if hwnd != -1:
+            try:
+                left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+                return ImageGrab.grab(bbox=(left, top, right, bottom))
+            except Exception as e:
+                pr(f"Error capturing window: {e}")
+                self.logger.warning(f"Error capturing window: {e}")
+                return None
+        else:
+            return ImageGrab.grab()
