@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.131"
+VERSION     = "0.0.133"
 LASTUPDATED = "2025-05-27"
 
 import sys
@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
+from datetime import datetime
 locale.setlocale(locale.LC_TIME, '')
 if getattr(sys, 'frozen', False):
     # If the application is run as a bundle, the PyInstaller bootloader
@@ -24,6 +25,7 @@ else:
 EXTERNAL_CONFIG = Path(EXECUTABLE_DIR, "configuration.json")
 if not EXTERNAL_CONFIG.exists():
     raise FileExistsError(f"Can't find external configuration at: {str(EXTERNAL_CONFIG)}.")
+LAUNCH_TIME = datetime.now()
 
 @dataclass
 class Geometry:
