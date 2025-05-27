@@ -21,14 +21,21 @@ from PIL import ImageGrab
 import threading
 from pathlib import Path
 import copy
+import logging
+from logging.handlers import RotatingFileHandler
 
 if config.BUNDLE_MODE:
     PIC_TEMPLATE = Path(config.BUNDLE_PATH, "src/monitorMatchTemplates")
 else:
     PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
 MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
+MONITOR_LOG_PATH = Path(
+        cfg.paths.otto,
+        rf'存档/切割机监视{config.LAUNCH_TIME.strftime("%Y%m%d")}.log'
+        )
+
+
 pr = util.pr
-logger = util.monitorLogger
 monitor = None
 
 
@@ -69,6 +76,7 @@ class Monitor:
         self.templateAlert = None
         self.templateAlertForceReturn = None
         self.templateNoAlert = None
+        self.logger: Optional[logging.Logger] = None
         # self.templateRunning:          Optional[MatLike] = None
         # self.templatePaused:           Optional[MatLike] = None
         # self.templatePausedCuttingHeadTouch:           Optional[MatLike] = None
@@ -77,8 +85,38 @@ class Monitor:
         # self.templateAlert:            Optional[MatLike] = None
         # self.templateAlertForceReturn: Optional[MatLike] = None
         # self.templateNoAlert:          Optional[MatLike] = None
+        self._setupLog()
+        self._loadTemplates()
 
-    def loadTemplates(self) -> None:
+
+    def _setupLog(self): # {{{
+        # Check duplicated log name collision
+        duplicateCount = 2
+        logPath = MONITOR_LOG_PATH
+        while logPath.exists():
+            logPath = Path(
+                    logPath.parent,
+                    logPath.stem + f"{ duplicateCount }" + logPath.suffix,
+            )
+            duplicateCount += 1
+
+        # Set up looger
+        handler = RotatingFileHandler(
+            logPath, # type: ignore
+            maxBytes=15 * 1024 * 1024,  # 5 MB
+            backupCount=3,
+            encoding="utf-8",
+        )
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
+        )
+
+        self.logger = logging.getLogger("tubeProMonitor")
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(handler)
+    # }}}
+
+    def _loadTemplates(self) -> None: # {{{
         """
         Loads and validates OpenCV template images for monitoring tube processing states.
 
@@ -106,7 +144,7 @@ class Monitor:
             p = Path(PIC_TEMPLATE, fileName)
             if not p.exists():
                 pr(f"Cannot find template: {p}")
-                logger.error(f"Cannot find template: {p}")
+                self.logger.error(f"Cannot find template: {p}")
                 self.enabled = False
                 return
             else:
@@ -117,9 +155,10 @@ class Monitor:
                     setattr(self, attrName, template)
                 except Exception as e:
                     pr(f"Error loading template image: {e}")
-                    logger.error(f"Error loading template image: {e}")
+                    self.logger.error(f"Error loading template image: {e}")
                     self.enabled = False
                     return
+        # }}}
 
     def startMonitoring(self) -> None:
         """
@@ -128,7 +167,7 @@ class Monitor:
         """
         self.isRunning = True
         pr("Monitoring started.")
-        logger.info("Monitoring started.")
+        self.logger.info("Monitoring started.")
         threading.Thread(target=self._monitor_loop, daemon=True).start()
 
     def stopMonitoring(self) -> None:
@@ -154,7 +193,7 @@ class Monitor:
         ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
         if ans == win32con.IDYES:
             pr("Monitoring stopped.")
-            logger.info("Monitoring stopped.")
+            self.logger.info("Monitoring stopped.")
 
     def toggleMonitoring(self) -> None:
         """
@@ -162,7 +201,7 @@ class Monitor:
         """
         if not self.enabled:
             pr("Monitoring is unavailable due to missing or invalid templates.")
-            logger.info("Monitoring is unavailable due to missing or invalid templates.")
+            self.logger.info("Monitoring is unavailable due to missing or invalid templates.")
             return
         if self.isRunning:
             self.stopMonitoring()
@@ -191,7 +230,7 @@ class Monitor:
             self.isRunning = False
             subprocess.call(["shutdown", "-s"])
             pr("Currently it's off-work hours, shutdown the machine.")
-            logger.warning("Currently it's off-work hours, shutdown the machine.")
+            self.logger.warning("Currently it's off-work hours, shutdown the machine.")
 
     def _monitor_loop(self) -> None:
         """
@@ -219,7 +258,7 @@ class Monitor:
             self.checkCount += 1
 
             pr(f"Monitoring for the {self.checkCount} times...")
-            logger.info(f"Monitoring for the {self.checkCount} times...")
+            self.logger.info(f"Monitoring for the {self.checkCount} times...")
 
             hwndTitles = {}
             def winEnumHandler(hwnd, ctx):
@@ -234,7 +273,7 @@ class Monitor:
             foregroundProcessId   = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             if foregroundProcessId <= 0 or psutil.Process(foregroundProcessId).name() != "TubePro.exe":
                 pr("TubePro isn't the foreground window.", gui=False)
-                logger.warning("TubePro isn't the foreground window.")
+                self.logger.warning("TubePro isn't the foreground window.")
                 cursorPosCurrent = hotkey.mouse.position
 
                 if cursorPosLast:
@@ -259,10 +298,10 @@ class Monitor:
                                     try:
                                         win32gui.SetForegroundWindow(hwnd)
                                         pr("TubePro has been idle for too long and now it's been brought to the foreground window.")
-                                        logger.info("TubePro has been idle for too long and now it's been brought to the foreground window.")
+                                        self.logger.info("TubePro has been idle for too long and now it's been brought to the foreground window.")
                                         cursorIdleCount = 0 # reset
                                     except pywintypes.error:
-                                        logger.error("Failed to bring tubePro window to the front.")
+                                        self.logger.error("Failed to bring tubePro window to the front.")
 
                                 break
 
@@ -293,13 +332,13 @@ class Monitor:
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
                     pr(f"Matched {name} with {maxVal * 100:.2f}% similarity.", gui=False)
-                    logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
+                    self.logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
                     if name == "finished02": # {{{
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
 
                             pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
-                            logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+                            self.logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
 
                             # `win32api.MessageBox` inside `takeScreenshot()`
                             # is a blocking call—it halts the thread so we need
@@ -309,11 +348,11 @@ class Monitor:
                             curRecordThread.start()
                             messageBoxHwnd = cutRecord.findMessageBoxWindow()
                             if messageBoxHwnd:
-                                logger.info("Close message window in 5s.")
+                                self.logger.info("Close message window in 5s.")
                                 time.sleep(5)
                                 ctypes.windll.user32.PostMessageW(messageBoxHwnd, win32con.WM_CLOSE, 0, 0)
                             else:
-                                logger.warning("Can't find message window.")
+                                self.logger.warning("Can't find message window.")
 
 
                             curRecordThread.join() # Ensure the thread completes
@@ -361,14 +400,14 @@ class Monitor:
                                 >= self.alertHaltThreshold
                             ):
                                 pr(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
-                                logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
                                 if self.checkInterval == self.checkIntervalNormal:
                                     self.checkInterval = self.checkIntervalLong
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                 self.offWorkShutdownChk(currentTime)
                             else:
                                 pr("Cutting is paused, auto-click continue.")
-                                logger.info("Cutting is paused, auto-click continue.")
+                                self.logger.info("Cutting is paused, auto-click continue.")
                                 screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
                                 emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
                                 savedPosition = copy.copy(hotkey.mouse.position)
@@ -394,14 +433,14 @@ class Monitor:
                             name = "alertForceReturn"
                             # TODO: cut down the tube
                             pr("Force return is detected.")
-                            logger.warning("Force return is detected.")
+                            self.logger.warning("Force return is detected.")
                             if self.checkInterval == self.checkIntervalNormal:
                                 self.checkInterval = self.checkIntervalLong
                             screenshotPath = util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
                             emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
                         else:
                             pr("Alert is detected.")
-                            logger.warning("Alert is detected.")
+                            self.logger.warning("Alert is detected.")
                             emailNotify.send(name, tubeProTitleCurrent)
                             if self.checkInterval == self.checkIntervalNormal:
                                 self.checkInterval = self.checkIntervalLong
@@ -421,7 +460,7 @@ class Monitor:
                             if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp >= self.alertCooldown):
                                 self.alertCount = 0
                                 pr("Alert cleared. Back to the track")
-                                logger.info("Alert cleared. Back to the track")
+                                self.logger.info("Alert cleared. Back to the track")
 
                             completionIdleCount = 0
 
@@ -441,7 +480,7 @@ class Monitor:
         screenshot = captureWindow(-1)
         if screenshot is None:
             pr(f"Caputre image failed")
-            logger.info(f"Caputre image failed")
+            self.logger.info(f"Caputre image failed")
             return
 
         # Convert to OpenCV format
@@ -466,7 +505,7 @@ class Monitor:
             matchResult = cv2.matchTemplate(screenshotCVUint8, template, cv2.TM_CCOEFF_NORMED)
             _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
             pr(f"{name}: {maxVal}")
-            logger.info(f"{name}: {maxVal}")
+            self.logger.info(f"{name}: {maxVal}")
             if maxVal >= self.similarityThreshold:
                 templateWidth, templateHeight = template.shape[:2]
                 matchResults.append((maxVal, maxLoc, templateWidth, templateHeight))
@@ -499,7 +538,7 @@ def captureWindow(hwnd):
             return ImageGrab.grab(bbox=(left, top, right, bottom))
         except Exception as e:
             pr(f"Error capturing window: {e}")
-            logger.warning(f"Error capturing window: {e}")
+            self.logger.warning(f"Error capturing window: {e}")
             return None
     else:
         return ImageGrab.grab()

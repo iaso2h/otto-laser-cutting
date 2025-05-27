@@ -11,6 +11,7 @@ import os
 import dearpygui.dearpygui as dpg
 import win32api, win32con
 from datetime import datetime, timedelta
+from typing import Optional
 
 dpg.create_context()
 reg = dpg.add_font_registry()
@@ -60,14 +61,14 @@ with dpg.window(
     dpg.add_separator(label="开料实时检测")
     with dpg.group(horizontal=True):
         tubeProMonitor.monitor = tubeProMonitor.Monitor()
-        tubeProMonitor.monitor.loadTemplates()
         dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
         dpg.add_button(label="匹配检测", callback=tubeProMonitor.monitor.checkTemplateMatches)
     dpg.add_input_text(
         multiline=True,
-        default_value=util.logFlow,
+        default_value=util.logFlow, # type: ignore
         tab_input=True,
         tracked=False,
+        track_offset=0,
         width=cfg.geometry.width - 30,
         height=155,
         readonly=True,
@@ -77,18 +78,25 @@ with dpg.window(
     def clearLog():
         util.logFlow = ""
         dpg.set_value("log", value=util.logFlow)
+    def toggleLogTrackihg(sender, appData):
+        currentTracked = dpg.get_item_configuration("log")["tracked"]
+        dpg.configure_item("log", tracked=(not currentTracked))
+
+    with dpg.group(horizontal=True):
+        # BUG:
+        # dpg.add_checkbox(label="自动滚动日志", default_value=False, callback=toggleLogTrackihg)
+        dpg.add_button(label="清除日志", callback=clearLog)
 
     with dpg.group(horizontal=True):
         dpg.add_button(label="退出", callback=dpg.destroy_context)
-        guiStartTime = datetime.now()
         shutdownNotification = dpg.add_text(label="placeHolder")
         shutdownPicker = dpg.add_time_picker(
                 label="timePicker",
                 hour24=True,
                 default_value={
-                    "hour": guiStartTime.hour,
-                    "min": guiStartTime.minute,
-                    "sec": guiStartTime.second,
+                    "hour": config.LAUNCH_TIME.hour,
+                    "min": config.LAUNCH_TIME.minute,
+                    "sec": config.LAUNCH_TIME.second,
                     }
                 )
         shutdownBtn = dpg.add_button(label="定时关机")
@@ -109,7 +117,7 @@ with dpg.window(
                 f"是否在{shutdownTimeReadable}关机？",
                 "关机确认",
                 4096 + 4 + 32
-                ):
+            ):
                 #   MB_SYSTEMMODAL==4096
                 ##  Button Styles:
                 ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
@@ -122,6 +130,5 @@ with dpg.window(
                 subprocess.call(["shutdown", "-s", "-t", f"{secondsToShutdown}"])
 
         dpg.set_item_callback(shutdownBtn, shutDownCallBack)
-        dpg.add_button(label="清除日志", callback=clearLog)
 
 

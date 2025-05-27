@@ -2,36 +2,18 @@ import config
 from config import cfg
 
 import os
-import traceback
 import shutil
 import datetime
 import win32api, win32con
 import re
-import logging
 import dearpygui.dearpygui as dpg
-from logging.handlers import RotatingFileHandler
 from pprint import pprint
 from pathlib import Path
 from openpyxl import Workbook
+from typing import Optional
 from typing import List
 from PIL.Image import Image
 
-MONITOR_LOG_PATH = Path(cfg.paths.otto, r"存档/切割机监视.log")
-
-# Logging set up
-handler = RotatingFileHandler(
-    MONITOR_LOG_PATH, # type: ignore
-    maxBytes=15 * 1024 * 1024,  # 5 MB
-    backupCount=3,
-    encoding="utf-8",
-)
-handler.setFormatter(
-    logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
-)
-
-monitorLogger = logging.getLogger("tubeProMonitor")
-monitorLogger.setLevel(logging.INFO)
-monitorLogger.addHandler(handler)
 
 logFlow = []
 
@@ -56,15 +38,16 @@ def pr(*args, gui: bool=True):
         pprint(newMessage)
 
 
-def getTimeStamp() -> str:
+def getTimeStamp(dt: Optional[datetime.datetime]=None) -> str:
     """
     Returns current time in 'HH:MM:SS' format as a string.
 
     Returns:
         str: Formatted time string showing hours, minutes and seconds.
     """
-    now = datetime.datetime.now()
-    return str(now.strftime("%H:%M:%S"))
+    if not dt:
+        dt = datetime.datetime.now()
+    return dt.strftime("%H:%M:%S")
     # return str(now.strftime(f"%Y/{now.month}/%d %H:%M:%S"))
 
 
