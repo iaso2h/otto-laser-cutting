@@ -453,5 +453,6 @@ def rtfSimplify():
                     for line in refineLines:
                         f2.write(line)
                 pr("导出日志: ", str(targetPath))
+                parsedPeriodCount += 1
 
     pr("rtf日志精简完成")
