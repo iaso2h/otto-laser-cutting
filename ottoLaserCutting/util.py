@@ -47,12 +47,13 @@ def pr(*args, gui: bool=True):
     """
 
     global logFlow
-    logFlow.append("\n".join(args))
+    newMessage = "\n".join(args)
+    logFlow.append(newMessage)
     message = "\n".join(logFlow)
-    if not gui:
+    if gui:
         dpg.set_value("log", value=message)
     if not config.BUNDLE_MODE:
-        pprint(*args)
+        pprint(newMessage)
 
 
 def getTimeStamp() -> str:
