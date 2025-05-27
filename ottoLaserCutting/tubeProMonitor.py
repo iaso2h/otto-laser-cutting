@@ -58,9 +58,6 @@ class Monitor:
         """
         self.isRunning = False
         self.lastAlertTimeStamp = 0.0
-        self.checkIntervalNormal = 3
-        self.checkIntervalLong  = 180
-        self.checkInterval = self.checkIntervalNormal
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
@@ -248,7 +245,6 @@ class Monitor:
         cursorPosLast = None
         cursorPosCurrent = None
         cursorIdleCount = 0
-        completionIdleCount = 0
         currentTime = datetime.now()
         tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
@@ -369,13 +365,9 @@ class Monitor:
                             # Send email notification
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
-
                             # Check off-work hours and shutdown if necessary
                             self.offWorkShutdownChk(currentTime)
-                        else:
-                            completionIdleCount += 1
-                            if completionIdleCount >= 60 and self.checkInterval == self.checkIntervalNormal:
-                                self.checkIntervalNormal = self.checkIntervalLong
+
 
                         break
                     # }}}
@@ -406,8 +398,6 @@ class Monitor:
                             ):
                                 pr(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
                                 self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
-                                if self.checkInterval == self.checkIntervalNormal:
-                                    self.checkInterval = self.checkIntervalLong
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                 self.offWorkShutdownChk(currentTime)
                             else:
@@ -448,8 +438,6 @@ class Monitor:
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
 
-                        if self.checkInterval == self.checkIntervalNormal:
-                            self.checkInterval = self.checkIntervalLong
                         break
                     # }}}
                     elif stateName == "noAlert": # {{{
@@ -464,11 +452,6 @@ class Monitor:
                                 self.alertCount = 0
                                 pr("Alert cleared. Back to the track")
                                 self.logger.info("Alert cleared. Back to the track")
-
-                            completionIdleCount = 0
-
-                            if self.checkInterval != self.checkIntervalNormal:
-                                self.checkInterval = self.checkIntervalNormal
 
                         break
                     # }}}
