@@ -170,28 +170,23 @@ class Monitor:
 
     def offWorkShutdownChk(self, currentTime: datetime):
         """
-        Shuts down the machine during off-work hours (21:00 to next day 07:00).
-        If current time falls within this period, sets isRunning flag to False and initiates system shutdown.
+        Determines if the current time is within off-work hours (21:00 to next day 07:00).
+        Logs whether the machine should be shut down during off-work hours.
 
         Args:
-            currentTime (datetime): The current datetime to check against work hours.
-
-        Logs:
-            Info message indicating whether shutdown was triggered or not.
+            current_time (datetime): The current datetime to check against work hours.
         """
-        midNight = datetime(
-            currentTime.year, currentTime.month, currentTime.day, 0, 0, 0
-        )
-        midNight += timedelta(days=1)
-        if currentTime < midNight:
-            timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
-            timeGoToWork   = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0)
-            timeGoToWork += timedelta(days=1)
-        else:
-            timeGetOffWork = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
-            timeGetOffWork -= timedelta(days=1)
-            timeGoToWork   = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0)
-        if timeGetOffWork <= currentTime <= timeGoToWork:
+        # Define the off-work period (21:00 to next day 07:00)
+        offWorkStart = datetime(currentTime.year, currentTime.month, currentTime.day, 21, 0, 0)
+        workStart = datetime(currentTime.year, currentTime.month, currentTime.day, 7, 0, 0) + timedelta(days=1)
+
+        # Adjust for cases where current_time is before midnight
+        if currentTime < offWorkStart:
+            offWorkStart -= timedelta(days=1)
+            workStart -= timedelta(days=1)
+
+        # Check if current_time is within the off-work period
+        if offWorkStart <= currentTime <= workStart:
             self.isRunning = False
             subprocess.call(["shutdown", "-s"])
             pr("Currently it's off-work hours, shutdown the machine.")
@@ -234,8 +229,8 @@ class Monitor:
                 return True
             win32gui.EnumWindows(winEnumHandler, None)
 
-            foregroundHWND = win32gui.GetForegroundWindow()
-            foregroundProcessId = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
+            foregroundHWND        = win32gui.GetForegroundWindow()
+            foregroundProcessId   = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             foregroundProcessName = psutil.Process(foregroundProcessId).name()
             if foregroundProcessName != "TubePro.exe":
                 pr("TubePro isn't the foreground window.", gui=False)

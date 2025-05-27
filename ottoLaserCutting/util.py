@@ -203,7 +203,8 @@ def getAllLaserFiles() -> List[Path]:  # {{{
         if p.is_file() and "demo" not in p.stem.lower():
             laserFilePaths.append(p)
 
-    return laserFilePaths # }}}
+    return laserFilePaths
+# }}}
 
 
 def diametartSymbolUnify(input: str) -> str:

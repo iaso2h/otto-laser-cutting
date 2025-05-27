@@ -193,8 +193,6 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
     ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
     ##  To also change icon, add these values to previous number
     ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
-
-
 # }}}
 
 
