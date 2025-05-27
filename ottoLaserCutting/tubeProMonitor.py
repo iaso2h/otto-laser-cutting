@@ -71,8 +71,8 @@ class Monitor:
         self.templateRunning = None
         self.templatePaused = None
         self.templatePausedCuttingHeadTouch = None
-        self.templateFinished01 = None
-        self.templateFinished02 = None
+        self.templateCompletion01 = None
+        self.templateCompletion02 = None
         self.templateAlert = None
         self.templateAlertForceReturn = None
         self.templateNoAlert = None
@@ -80,8 +80,8 @@ class Monitor:
         # self.templateRunning:          Optional[MatLike] = None
         # self.templatePaused:           Optional[MatLike] = None
         # self.templatePausedCuttingHeadTouch:           Optional[MatLike] = None
-        # self.templateFinished01:       Optional[MatLike] = None
-        # self.templateFinished02:       Optional[MatLike] = None
+        # self.templateCompletion01:       Optional[MatLike] = None
+        # self.templateCompletion02:       Optional[MatLike] = None
         # self.templateAlert:            Optional[MatLike] = None
         # self.templateAlertForceReturn: Optional[MatLike] = None
         # self.templateNoAlert:          Optional[MatLike] = None
@@ -134,8 +134,8 @@ class Monitor:
             ("templateRunning", "running.png"),
             ("templatePaused", "paused.png"),
             ("templatePausedCuttingHeadTouch", "pausedWithCuttingHeadTouch.png"),
-            ("templateFinished01", "finished01.png"),
-            ("templateFinished02", "finished02.png"),
+            ("templateCompletion01", "completion01.png"),
+            ("templateCompletion02", "completion02.png"),
             ("templateAlert", "alert.png"),
             ("templateAlertForceReturn", "alertForceReturn.png"),
             ("templateNoAlert", "noAlert.png"),
@@ -239,7 +239,7 @@ class Monitor:
         This function continuously checks:
         - If TubePro is the foreground window
         - Mouse cursor idle time (brings TubePro to foreground if idle too long)
-        - Matches window content against templates to detect states (paused, finished, alerts)
+        - Matches window content against templates to detect states (paused, completion, alerts)
         - Takes appropriate actions for each state (screenshots, notifications, auto-clicks)
         - Handles error conditions and cooldowns
 
@@ -252,6 +252,7 @@ class Monitor:
         currentTime = datetime.now()
         tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
+        tubeProTitleLastAlert = ""
         while self.isRunning:
             tubeProTitleCurrent = ""
             time.sleep(self.checkInterval)
@@ -303,7 +304,7 @@ class Monitor:
                                     except pywintypes.error:
                                         self.logger.error("Failed to bring tubePro window to the front.")
 
-                                break
+                                    break
 
 
                 cursorPosLast = cursorPosCurrent
@@ -311,6 +312,10 @@ class Monitor:
             else:
                 tubeProHWND = foregroundHWND
                 tubeProTitleCurrent = win32gui.GetWindowText(tubeProHWND)
+
+            # Skip if the main window isn't in the front
+            if not tubeProTitleCurrent.startswith("TubePro"):
+                continue
 
             # Capture window content from TubePro
             screenshot = captureWindow(-1)
@@ -321,19 +326,19 @@ class Monitor:
             screenshotCV = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
 
             # Compare with templates
-            for name, attrName in (
-                ("paused",     "templatePaused"),
-                ("finished02", "templateFinished02"),
-                ("alert",      "templateAlert"),
-                ("noAlert",    "templateNoAlert"),
+            for stateName, attrName in (
+                ("paused",       "templatePaused"),
+                ("completion02", "templateCompletion02"),
+                ("alert",        "templateAlert"),
+                ("noAlert",      "templateNoAlert"),
             ):
                 template = getattr(self, attrName)
                 matchResult = cv2.matchTemplate(screenshotCV, template, cv2.TM_CCOEFF_NORMED)
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
-                    pr(f"Matched {name} with {maxVal * 100:.2f}% similarity.", gui=False)
-                    self.logger.info(f"Matched {name} with {maxVal * 100:.2f}% similarity.")
-                    if name == "finished02": # {{{
+                    pr(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.", gui=False)
+                    logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
+                    if stateName == "completion02": # {{{
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
 
@@ -359,10 +364,10 @@ class Monitor:
 
                             # Make records for monitoring
                             os.makedirs(MONITOR_PIC, exist_ok=True)
-                            screenshotPath = util.screenshotSave(screenshot, name, MONITOR_PIC)
+                            screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
 
                             # Send email notification
-                            emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
+                            emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
 
                             # Check off-work hours and shutdown if necessary
@@ -374,7 +379,7 @@ class Monitor:
 
                         break
                     # }}}
-                    elif name == "paused": # {{{
+                    elif stateName == "paused": # {{{
                         matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templatePausedCuttingHeadTouch,
@@ -386,7 +391,7 @@ class Monitor:
                         if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
                             self.alertCount += 1
                             self.lastAlertTimeStamp = currentTime.timestamp()
-                            name = "pauseThenContinue"
+                            stateName = "pauseThenContinue"
 
                             if (
                                 (
@@ -409,7 +414,7 @@ class Monitor:
                                 pr("Cutting is paused, auto-click continue.")
                                 self.logger.info("Cutting is paused, auto-click continue.")
                                 screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
-                                emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
+                                emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
                                 savedPosition = copy.copy(hotkey.mouse.position)
                                 time.sleep(5)
                                 hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
@@ -419,7 +424,7 @@ class Monitor:
 
                         break
                     # }}}
-                    elif name == "alert": # {{{
+                    elif stateName == "alert": # {{{
                         self.lastAlertTimeStamp = currentTime.timestamp()
                         matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
                             screenshotCV,
@@ -429,27 +434,25 @@ class Monitor:
                         _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(
                             matchResultAlertForceReturn
                         )
-                        if maxValAlertForceReturn >= self.similarityThreshold:
-                            name = "alertForceReturn"
-                            # TODO: cut down the tube
-                            pr("Force return is detected.")
-                            self.logger.warning("Force return is detected.")
-                            if self.checkInterval == self.checkIntervalNormal:
-                                self.checkInterval = self.checkIntervalLong
-                            screenshotPath = util.screenshotSave(screenshot, "alertForceReturn", MONITOR_PIC)
-                            emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
-                        else:
-                            pr("Alert is detected.")
-                            self.logger.warning("Alert is detected.")
-                            emailNotify.send(name, tubeProTitleCurrent)
-                            if self.checkInterval == self.checkIntervalNormal:
-                                self.checkInterval = self.checkIntervalLong
-                            screenshotPath = util.screenshotSave(screenshot, "alert", MONITOR_PIC)
-                            emailNotify.send(name, tubeProTitleCurrent, screenshotPath)
+                        if tubeProTitleCurrent != tubeProTitleLastAlert:
+                            if maxValAlertForceReturn >= self.similarityThreshold:
+                                stateName = "alertForceReturn"
+                                # TODO: cut down the tube
+                                pr("Force return is detected.")
+                                logger.warning("Force return is detected.")
+                            else:
+                                pr("Alert is detected.")
+                                logger.warning("Alert is detected.")
 
+                            screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
+                            emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
+
+
+                        if self.checkInterval == self.checkIntervalNormal:
+                            self.checkInterval = self.checkIntervalLong
                         break
                     # }}}
-                    elif name == "noAlert": # {{{
+                    elif stateName == "noAlert": # {{{
                         matchResultRunning = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,
@@ -495,8 +498,8 @@ class Monitor:
             ("running",                    "templateRunning"),
             ("paused",                     "templatePaused"),
             ("pausedWithCuttingHeadTouch", "templatePausedCuttingHeadTouch"),
-            ("finished01",                 "templateFinished01"),
-            ("finished02",                 "templateFinished02"),
+            ("completion01",               "templateCompletion01"),
+            ("completion02",               "templateCompletion02"),
             ("alert",                      "templateAlert"),
             ("alertForceReturn",           "templateAlertForceReturn"),
             ("noAlert",                    "templateNoAlert"),
