@@ -46,11 +46,12 @@ screenshotPaths = []
 def findMessageBoxWindow() -> Optional[int]:
     print("Finding prompted window")
     startTime = time.time()
-    timeout = 5  # seconds
+    timeout = 10  # seconds
     while time.time() - startTime < timeout:
         hwnd = win32gui.FindWindow(None, MESSAGEBOX_TITLE)
         if hwnd != 0:
             return hwnd
+
         time.sleep(0.1)  # Poll every 100 milliseconds
     return None
 

@@ -58,6 +58,7 @@ class Monitor:
         """
         self.isRunning = False
         self.lastAlertTimeStamp = 0.0
+        self.checkInterval = 3
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
@@ -345,8 +346,17 @@ class Monitor:
                             # is a blocking call—it halts the thread so we need
                             # to make sure it call in a new thread then
                             # complete thread after 5 seconds
-                            curRecordThread = threading.Thread(target=lambda: cutRecord.takeScreenshot(screenshot))
+                            screenshotOnCompletionDone = threading.Event()
+                            def screenshotOnCompletion(screenshot):
+                                try:
+                                    cutRecord.takeScreenshot(screenshot)
+                                finally:
+                                    screenshotOnCompletionDone.set()  # Signal completion
+                            curRecordThread = threading.Thread(target=screenshotOnCompletion)
                             curRecordThread.start()
+
+
+                            self.logger.info("Finding messagebox window.")
                             messageBoxHwnd = cutRecord.findMessageBoxWindow()
                             if messageBoxHwnd:
                                 self.logger.info("Close message window in 5s.")
@@ -355,14 +365,21 @@ class Monitor:
                             else:
                                 self.logger.warning("Can't find message window.")
 
+                            if screenshotOnCompletionDone.is_set():
+                                self.logger.info("Screenshot task completed.")
+                            else:
+                                self.logger.info("Screenshot task running in background.")
+
 
                             curRecordThread.join() # Ensure the thread completes
 
                             # Make records for monitoring
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
+                            self.logger.info(f"Save screenshot at {screenshotPath}")
 
                             # Send email notification
+                            self.logger.info("Close message window in 5s.")
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
                             # Check off-work hours and shutdown if necessary

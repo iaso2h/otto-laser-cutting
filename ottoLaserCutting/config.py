@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.136"
+VERSION     = "0.0.137"
 LASTUPDATED = "2025-05-27"
 
 import sys
