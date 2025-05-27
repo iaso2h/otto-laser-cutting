@@ -236,10 +236,10 @@ class Monitor:
         else:
             self.startMonitoring()
 
-    def offWorkShutdownChk(self, currentTime: datetime):
+    def offWorkShutdownChk(self, currentTime: datetime) -> bool:
         """
         Determines if the current time is within off-work hours (21:00 to next day 07:00).
-        Logs whether the machine should be shut down during off-work hours.
+        Logs whether the machine is wroking during work time.
 
         Args:
             current_time (datetime): The current datetime to check against work hours.
@@ -255,10 +255,9 @@ class Monitor:
 
         # Check if current_time is within the off-work period
         if offWorkStart <= currentTime <= workStart:
-            self.isRunning = False
-            subprocess.call(["shutdown", "-s"])
-            pr("Currently it's off-work hours, shutdown the machine.")
-            self.logger.warning("Currently it's off-work hours, shutdown the machine.")
+            return True
+        else:
+            return False
 
     def _monitor_loop(self) -> None:
         """
@@ -413,7 +412,11 @@ class Monitor:
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
                             # Check off-work hours and shutdown if necessary
-                            self.offWorkShutdownChk(currentTime)
+                            if self.offWorkShutdownChk(currentTime):
+                                self.isRunning = False
+                                subprocess.call(["shutdown", "-s"])
+                                pr("Currently it's off-work hours, shutdown the machine.")
+                                self.logger.warning("Currently it's off-work hours, shutdown the machine.")
 
 
                         break
@@ -433,20 +436,22 @@ class Monitor:
                             stateName = "pauseThenContinue"
 
                             if (
-                                (
-                                    int(
-                                        currentTime.timestamp()
-                                        - self.lastAlertTimeStamp
-                                        )
-                                    < self.alertCooldown
-                                )
-                                or self.alertCount
-                                >= self.alertHaltThreshold
-                            ):
+                                int(currentTime.timestamp() - self.lastAlertTimeStamp)
+                                < self.alertCooldown
+                            ) or self.alertCount >= self.alertHaltThreshold:
                                 pr(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
                                 self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                if tubeProTitleCurrent == tubeProTitleLastAlert:
+                                    break
+
                                 util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
-                                self.offWorkShutdownChk(currentTime)
+                                tubeProTitleLastAlert = tubeProTitleCurrent
+                                # Check off-work hours and shutdown if necessary
+                                if self.offWorkShutdownChk(currentTime):
+                                    self.isRunning = False
+                                    subprocess.call(["shutdown", "-s"])
+                                    pr("Currently it's off-work hours, shutdown the machine.")
+                                    self.logger.warning("Currently it's off-work hours, shutdown the machine.")
                             else:
                                 pr("Cutting is paused, auto-click continue.")
                                 self.logger.info("Cutting is paused, auto-click continue.")
@@ -472,6 +477,7 @@ class Monitor:
                             matchResultAlertForceReturn
                         )
                         if tubeProTitleCurrent != tubeProTitleLastAlert:
+                            tubeProTitleLastAlert = tubeProTitleCurrent
                             if maxValAlertForceReturn >= self.similarityThreshold:
                                 stateName = "alertForceReturn"
                                 # TODO: cut down the tube
@@ -483,7 +489,6 @@ class Monitor:
 
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
-
 
                         break
                     # }}}
@@ -497,6 +502,7 @@ class Monitor:
                         if maxValRunning >= self.similarityThreshold:
                             if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp >= self.alertCooldown):
                                 self.alertCount = 0
+                                self.tubeProTitleLastAlert = ""
                                 pr("Alert cleared. Back to the track")
                                 self.logger.info("Alert cleared. Back to the track")
 
