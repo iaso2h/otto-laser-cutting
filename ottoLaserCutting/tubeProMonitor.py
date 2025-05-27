@@ -41,24 +41,32 @@ monitor = None
 
 class Monitor:
     def __init__(self):
-        """
-        Initializes the TubeProMonitor instance with default values for monitoring state and templates.
+        """Initialize the TubePro monitor with default settings and templates.
+        
+        Initializes all monitoring parameters and loads necessary templates. This includes:
+        - Monitoring state flags (isRunning, enabled)
+        - Timing parameters (checkInterval, alertCooldown)
+        - Alert tracking (alertCount, lastAlertTimeStamp)
+        - Image matching threshold (similarityThreshold)
+        - Template images for state detection
+        
         Attributes:
-            isRunning (bool): Indicates if monitoring is active.
-            lastAlertTimeStamp (float): Timestamp of last alert.
-            checkInterval (int): Seconds between monitoring checks.
-            checkCount (int): Number of checks performed.
-            programNotFoundRetry (int): Seconds to wait before retrying after program not found.
-            alertCooldown (int): Minimum seconds between alerts.
-            alertHaltThreshold (int): Max alerts before halting monitoring.
-            alertCount (int): Current alert count.
-            similarityThreshold (float): Image similarity threshold for detection.
-            enabled (bool): Whether monitoring is enabled.
-            template* (Optional[MatLike]): Image templates for various monitoring states.
+            isRunning (bool): Flag indicating if monitoring is currently active.
+            lastAlertTimeStamp (float): Unix timestamp of last detected alert.
+            checkInterval (int): Interval in seconds between monitoring checks.
+            checkCount (int): Counter for number of monitoring checks performed.
+            programNotFoundRetry (int): Seconds to wait before retrying when program not found.
+            alertCooldown (int): Minimum seconds required between consecutive alerts.
+            alertHaltThreshold (int): Maximum allowed alerts before halting monitoring.
+            alertCount (int): Current count of detected alerts.
+            similarityThreshold (float): Threshold (0-1) for template matching similarity.
+            enabled (bool): Flag indicating if monitoring is enabled (templates loaded).
+            template* (Optional[MatLike]): OpenCV image templates for state detection.
+            logger (logging.Logger): Configured logger instance for monitoring events.
         """
         self.isRunning = False
         self.lastAlertTimeStamp = 0.0
-        self.checkInterval = 3
+        self.checkInterval = 5
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
@@ -87,7 +95,18 @@ class Monitor:
         self._loadTemplates()
 
 
-    def _setupLog(self): # {{{
+    def _setupLog(self):
+        """Initialize and configure the rotating log file handler.
+
+        Sets up a rotating log file with the following characteristics:
+        - Checks for and resolves log file name collisions
+        - Uses UTF-8 encoding
+        - Limits file size to 15MB
+        - Keeps 3 backup copies
+        - Formats log messages with timestamp and log level
+
+        The logger is stored in self.logger and configured to log INFO level messages.
+        """
         # Check duplicated log name collision
         duplicateCount = 2
         logPath = MONITOR_LOG_PATH
