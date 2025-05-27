@@ -21,14 +21,41 @@ from PIL import ImageGrab
 import threading
 from pathlib import Path
 import copy
+import logging
+from logging.handlers import RotatingFileHandler
 
 if config.BUNDLE_MODE:
     PIC_TEMPLATE = Path(config.BUNDLE_PATH, "src/monitorMatchTemplates")
 else:
     PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
 MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
+MONITOR_LOG_PATH = Path(cfg.paths.otto, rf"存档/切割机监视{util.getTimeStamp(config.LAUNCH_TIME)}.log")
+
+
+# Check duplicated log name collision
+duplicateCount = 2
+while MONITOR_LOG_PATH.exists():
+    MONITOR_LOG_PATH = Path(
+            MONITOR_LOG_PATH.parent,
+            MONITOR_LOG_PATH.stem + f"{ duplicateCount }" + MONITOR_LOG_PATH.suffix,
+    )
+    duplicateCount += 1
+
+# Set up looger
+handler = RotatingFileHandler(
+    MONITOR_LOG_PATH, # type: ignore
+    maxBytes=15 * 1024 * 1024,  # 5 MB
+    backupCount=3,
+    encoding="utf-8",
+)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s [%(levelname)s]: %(message)s")
+)
+
+logger = logging.getLogger("tubeProMonitor")
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 pr = util.pr
-logger = util.monitorLogger
 monitor = None
 
 
