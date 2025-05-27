@@ -232,8 +232,7 @@ class Monitor:
 
             foregroundHWND        = win32gui.GetForegroundWindow()
             foregroundProcessId   = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
-            foregroundProcessName = psutil.Process(foregroundProcessId).name()
-            if foregroundProcessName != "TubePro.exe":
+            if foregroundProcessId <= 0 or psutil.Process(foregroundProcessId).name() != "TubePro.exe":
                 pr("TubePro isn't the foreground window.", gui=False)
                 logger.warning("TubePro isn't the foreground window.")
                 cursorPosCurrent = hotkey.mouse.position
