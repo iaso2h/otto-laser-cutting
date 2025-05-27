@@ -15,6 +15,7 @@ import cv2
 # from cv2.typing import MatLike
 import numpy as np
 import win32gui, win32process, win32api, win32con
+import pywintypes
 import psutil
 from PIL import ImageGrab
 import threading
@@ -256,10 +257,14 @@ class Monitor:
                                     tubeProTitleCurrent = title
                                     if win32gui.IsIconic(hwnd):
                                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                                    win32gui.SetForegroundWindow(hwnd)
-                                    pr("TubePro has been idle for too long and now it's been brought to the foreground window")
-                                    logger.info("TubePro has been idle for too long and now it's been brought to the foreground window")
-                                    cursorIdleCount = 0 # reset
+                                    try:
+                                        win32gui.SetForegroundWindow(hwnd)
+                                        pr("TubePro has been idle for too long and now it's been brought to the foreground window.")
+                                        logger.info("TubePro has been idle for too long and now it's been brought to the foreground window.")
+                                        cursorIdleCount = 0 # reset
+                                    except pywintypes.error:
+                                        logger.error("Failed to bring tubePro window to the front.")
+
                                 break
 
 
@@ -305,8 +310,12 @@ class Monitor:
                             curRecordThread.start()
                             messageBoxHwnd = cutRecord.findMessageBoxWindow()
                             if messageBoxHwnd:
+                                logger.info("Close message window in 5s.")
                                 time.sleep(5)
                                 ctypes.windll.user32.PostMessageW(messageBoxHwnd, win32con.WM_CLOSE, 0, 0)
+                            else:
+                                logger.warning("Can't find message window.")
+
 
                             curRecordThread.join() # Ensure the thread completes
 

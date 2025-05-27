@@ -51,7 +51,7 @@ def findMessageBoxWindow() -> Optional[int]:
         hwnd = win32gui.FindWindow(None, MESSAGEBOX_TITLE)
         if hwnd != 0:
             return hwnd
-        time.sleep(1)  # Poll every 1 seconds
+        time.sleep(0.1)  # Poll every 100 milliseconds
     return None
 
 
