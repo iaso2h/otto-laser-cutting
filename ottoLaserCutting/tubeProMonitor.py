@@ -22,6 +22,7 @@ import threading
 from pathlib import Path
 import copy
 import logging
+import re
 from logging.handlers import RotatingFileHandler
 
 if config.BUNDLE_MODE:
@@ -37,19 +38,20 @@ MONITOR_LOG_PATH = Path(
 
 pr = util.pr
 monitor = None
+fileNameIncreamentPat = re.compile(r"^(.*)\((\d)+\)$")
 
 
 class Monitor:
     def __init__(self):
         """Initialize the TubePro monitor with default settings and templates.
-        
+
         Initializes all monitoring parameters and loads necessary templates. This includes:
         - Monitoring state flags (isRunning, enabled)
         - Timing parameters (checkInterval, alertCooldown)
         - Alert tracking (alertCount, lastAlertTimeStamp)
         - Image matching threshold (similarityThreshold)
         - Template images for state detection
-        
+
         Attributes:
             isRunning (bool): Flag indicating if monitoring is currently active.
             lastAlertTimeStamp (float): Unix timestamp of last detected alert.
@@ -108,14 +110,23 @@ class Monitor:
         The logger is stored in self.logger and configured to log INFO level messages.
         """
         # Check duplicated log name collision
-        duplicateCount = 2
+        duplicateCount = 1
         logPath = MONITOR_LOG_PATH
         while logPath.exists():
-            logPath = Path(
-                    logPath.parent,
-                    logPath.stem + f"{ duplicateCount }" + logPath.suffix,
-            )
-            duplicateCount += 1
+            match = fileNameIncreamentPat.match(logPath.stem)
+            if match:
+                duplicateCount = int(match.group(2))
+                duplicateCount += 1
+                logPath = Path(
+                        logPath.parent,
+                        fileNameIncreamentPat.sub(rf"\1({duplicateCount})", logPath.stem + logPath.suffix)
+                )
+            else:
+                duplicateCount += 1
+                logPath = Path(
+                        logPath.parent,
+                        logPath.stem + f"({ duplicateCount })" + logPath.suffix,
+                )
 
         # Set up looger
         handler = RotatingFileHandler(
