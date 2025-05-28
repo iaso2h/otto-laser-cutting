@@ -91,7 +91,7 @@ def saveWorkbook(
 
         try:
             wb.save(str(dstPath))
-            print(f"\n[{getTimeStamp()}]:Saving Excel file at: {dstPath}")
+            pr(f"\n[{getTimeStamp()}]:Saving Excel file at: {dstPath}")
             if openAfterSaveChk:
                 os.startfile(dstPath)
             return dstPath
@@ -113,7 +113,7 @@ def saveWorkbook(
                     fallbackExportDir,
                     dstPath.stem + "_fallback_" + timeStr + ".xlsx")
                 wb.save(str(fallbackExcelPath))
-                print(f"\n[{getTimeStamp()}]:Saving fallback Excel file at: {fallbackExcelPath}")
+                pr(f"\n[{getTimeStamp()}]:Saving fallback Excel file at: {fallbackExcelPath}")
                 return fallbackExcelPath
 
     else:
@@ -121,7 +121,7 @@ def saveWorkbook(
             fallbackExportDir,
             timeStr + ".xlsx")
         wb.save(str(newExcelPath))
-        print(f"\n[{getTimeStamp()}]:Saving new Excel file at: {newExcelPath}")
+        pr(f"\n[{getTimeStamp()}]:Saving new Excel file at: {newExcelPath}")
         if openAfterSaveChk:
             os.startfile(newExcelPath)
         return newExcelPath
@@ -162,7 +162,7 @@ def strStandarize(old: Path) -> Path:
             os.rename(old, new)
             return Path(new)
         except PermissionError as e:
-            print(str(e))
+            pr(str(e))
             return old
 
     else:
@@ -223,7 +223,7 @@ def screenshotSave(screenshot: Image, namePrefix: str, dstDirPath: Path) -> Path
     Example:
         >>> img = Image.new('RGB', (100, 100))
         >>> path = screenshotSave(img, 'test', Path('/screenshots'))
-        >>> print(path)  # e.g. /screenshots/test 2023-01-01 120000.png
+        >>> pr(path)  # e.g. /screenshots/test 2023-01-01 120000.png
     """
     os.makedirs(dstDirPath, exist_ok=True)
     datetimeNow = datetime.datetime.now()
@@ -236,21 +236,29 @@ def screenshotSave(screenshot: Image, namePrefix: str, dstDirPath: Path) -> Path
 
 fileNameIncreamentPat = re.compile(r"^(.*)\((\d)+\)$")
 def incrementPathIfExist(p: Path) -> Path:
+    if not p.exists():
+        return p
+
     duplicateCount = 1
-    while p.exists():
+    while True:
         match = fileNameIncreamentPat.match(p.stem)
         if match:
             duplicateCount = int(match.group(2))
             duplicateCount += 1
             p = Path(
                     p.parent,
-                    fileNameIncreamentPat.sub(rf"\1({duplicateCount})", p.stem + p.suffix)
+                    fileNameIncreamentPat.sub(
+                        rf"\1({duplicateCount})",
+                        p.stem
+                    ) + p.suffix
             )
+            if not p.exists():
+                return p
         else:
             duplicateCount += 1
             p = Path(
                     p.parent,
                     p.stem + f"({ duplicateCount })" + p.suffix,
             )
-
-    return p
+            if not p.exists():
+                return p
