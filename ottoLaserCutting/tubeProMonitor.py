@@ -278,7 +278,7 @@ class Monitor:
         currentTime = datetime.now()
         tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
-        tubeProTitleLastAlert = ""
+        tubeProTitleLastAlert      = ""
         while self.isRunning:
             tubeProTitleCurrent = ""
             time.sleep(self.checkInterval)
@@ -433,19 +433,19 @@ class Monitor:
                         if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
                             self.alertCount += 1
                             self.lastAlertTimeStamp = currentTime.timestamp()
-                            stateName = "pauseThenContinue"
 
                             if (
                                 int(currentTime.timestamp() - self.lastAlertTimeStamp)
-                                < self.alertCooldown
+                                <= self.alertCooldown
                             ) or self.alertCount >= self.alertHaltThreshold:
                                 pr(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
                                 self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
                                 if tubeProTitleCurrent == tubeProTitleLastAlert:
                                     break
 
-                                util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                 tubeProTitleLastAlert = tubeProTitleCurrent
+                                screenshotPath = util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
+                                emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
                                 # Check off-work hours and shutdown if necessary
                                 if self.offWorkShutdownChk(currentTime):
                                     self.isRunning = False
@@ -453,16 +453,21 @@ class Monitor:
                                     pr("Currently it's off-work hours, shutdown the machine.")
                                     self.logger.warning("Currently it's off-work hours, shutdown the machine.")
                             else:
-                                pr("Cutting is paused, auto-click continue.")
-                                self.logger.info("Cutting is paused, auto-click continue.")
-                                screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
-                                emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
-                                savedPosition = copy.copy(hotkey.mouse.position)
-                                time.sleep(5)
-                                hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
-                                hotkey.mouse.press(hotkey.Button.left)
-                                hotkey.mouse.release(hotkey.Button.left)
-                                hotkey.mouse.position = savedPosition
+                                if self.offWorkShutdownChk(currentTime):
+                                    pr("Cutting is paused, auto-click continue.")
+                                    self.logger.warning("Cutting is paused, auto-click continue.")
+                                    screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
+                                    emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
+                                    savedPosition = copy.copy(hotkey.mouse.position)
+                                    time.sleep(5)
+                                    hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
+                                    hotkey.mouse.press(hotkey.Button.left)
+                                    hotkey.mouse.release(hotkey.Button.left)
+                                    hotkey.mouse.position = savedPosition
+                                else:
+                                    pr("It' work time now, auto-click continue is disabled.")
+                                    self.logger.info("It' work time now, auto-click continue is disabled.")
+
 
                         break
                     # }}}
@@ -500,11 +505,13 @@ class Monitor:
                         )
                         _, maxValRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
                         if maxValRunning >= self.similarityThreshold:
-                            if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp >= self.alertCooldown):
+                            if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp > self.alertCooldown):
                                 self.alertCount = 0
                                 self.tubeProTitleLastAlert = ""
                                 pr("Alert cleared. Back to the track")
                                 self.logger.info("Alert cleared. Back to the track")
+                            if tubeProTitleLastCompletion:
+                                tubeProTitleLastCompletion = ""
 
                         break
                     # }}}
