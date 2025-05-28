@@ -5,7 +5,6 @@ from config import cfg
 import cutRecord
 import workpiece
 import rtfParse
-import tubeProMonitor
 
 import os
 import dearpygui.dearpygui as dpg
@@ -32,6 +31,8 @@ dpg.create_viewport(
 
 dpg.setup_dearpygui()
 
+
+# Initiate GUI components
 with dpg.window(
         label="欧拓开料辅助 v" + config.VERSION,
         autosize=False,
@@ -60,13 +61,11 @@ with dpg.window(
         dpg.add_button(label="删除冗余排样", callback=workpiece.removeRedundantLaserFile)
     dpg.add_separator(label="开料实时检测")
     with dpg.group(horizontal=True):
-        tubeProMonitor.monitor = tubeProMonitor.Monitor()
-        tubeProMonitor.monitor.loadTemplates()
-        dpg.add_button(label="监视切割", callback=tubeProMonitor.monitor.toggleMonitoring)
-        dpg.add_button(label="匹配检测", callback=tubeProMonitor.monitor.checkTemplateMatches)
+        laserMonitorToggle        = dpg.add_button(label="切换检测")
+        laserMonitorCheckTemplate = dpg.add_button(label="匹配检测")
     dpg.add_input_text(
         multiline=True,
-        default_value=util.logFlow, # type: ignore
+        default_value="",
         tab_input=True,
         tracked=False,
         track_offset=0,
@@ -133,3 +132,14 @@ with dpg.window(
         dpg.set_item_callback(shutdownBtn, shutDownCallBack)
 
 
+
+import tubeProMonitor
+tubeProMonitor.monitor = tubeProMonitor.Monitor()
+dpg.configure_item(
+        laserMonitorToggle,
+        callback=tubeProMonitor.monitor.toggleMonitoring
+        )
+dpg.configure_item(
+        laserMonitorCheckTemplate,
+        callback=tubeProMonitor.monitor.checkTemplateMatches
+        )

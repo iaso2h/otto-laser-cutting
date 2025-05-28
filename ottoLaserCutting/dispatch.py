@@ -124,10 +124,9 @@ def fillPartInfo(): # {{{
 
     for _, p in enumerate(laserFilePaths):
         # https://regex101.com
-        fileNameMatch = re.match(
-                cfg.patterns.laserFile,
-                str(p.stem)
-                )
+        fileNameMatch = cfg.patterns.laserFile.match(
+            str(p.stem)
+        )
         if not fileNameMatch:
             continue
 

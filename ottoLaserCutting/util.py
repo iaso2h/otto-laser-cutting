@@ -47,7 +47,7 @@ def getTimeStamp(dt: Optional[datetime.datetime]=None) -> str:
     """
     if not dt:
         dt = datetime.datetime.now()
-    return str(dt.strftime("%H:%M:%S"))
+    return dt.strftime("%H:%M:%S")
     # return str(now.strftime(f"%Y/{now.month}/%d %H:%M:%S"))
 
 

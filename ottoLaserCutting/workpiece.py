@@ -73,10 +73,9 @@ def workpieceNamingVerification():
     invalidFilePathFoundChk = False
     for _, p in enumerate(laserFilePaths):
         if p.suffix == ".zx" or p.suffix == ".zzx":
-            fileNameMatch = re.match(
-                    cfg.patterns.laserFile,
-                    str(p.stem)
-                    )
+            fileNameMatch = cfg.patterns.laserFile.match(
+                str(p.stem)
+            )
             if not fileNameMatch:
                 invalidFilePathFoundChk = True
                 pr(f'------------------------\n({_}): "{p.stem}"')
@@ -198,15 +197,13 @@ def exportDimensions():
     workpieceFullNamesWithDimension = []
     workpieceNickNames = workpieceDict["nickname"]
     # <fullPartName>: ["<nickName>", "<comment>"]
-    fileNamePat      = re.compile(cfg.patterns.laserFile)
-    tubeDimensionPat = re.compile(cfg.patterns.workpieceDimension)
     for lIdx, p in enumerate(laserFilePaths):
         rowMax = ws.max_row + 1
         if p.suffix == ".zx" or p.suffix == ".zzx":
-            fileNameMatch = fileNamePat.match(str(p.stem))
+            fileNameMatch = cfg.patterns.laserFile.match(str(p.stem))
             boldFontChk = True
         else:
-            fileNameMatch = fileNamePat.match(str(p.name))
+            fileNameMatch = cfg.patterns.laserFile.match(str(p.name))
             boldFontChk = False
 
         workpieceNickName  = ""
@@ -349,7 +346,7 @@ def exportDimensions():
 
         # Calculate the surface area
         if workpieceDimension and fileNameMatchTick and "∅" in workpieceDimension and "L" in workpieceDimension:
-            m = tubeDimensionPat.match(workpieceDimension)
+            m = cfg.patterns.workpieceDimension.match(workpieceDimension)
             if m:
                 dia    = float(m.group(1)[1:])
                 length = float(m.group(3)[1:])
