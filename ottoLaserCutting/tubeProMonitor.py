@@ -38,7 +38,6 @@ MONITOR_LOG_PATH = Path(
 
 pr = util.pr
 monitor = None
-fileNameIncreamentPat = re.compile(r"^(.*)\((\d)+\)$")
 
 
 class Monitor:
@@ -110,23 +109,9 @@ class Monitor:
         The logger is stored in self.logger and configured to log INFO level messages.
         """
         # Check duplicated log name collision
-        duplicateCount = 1
         logPath = MONITOR_LOG_PATH
-        while logPath.exists():
-            match = fileNameIncreamentPat.match(logPath.stem)
-            if match:
-                duplicateCount = int(match.group(2))
-                duplicateCount += 1
-                logPath = Path(
-                        logPath.parent,
-                        fileNameIncreamentPat.sub(rf"\1({duplicateCount})", logPath.stem + logPath.suffix)
-                )
-            else:
-                duplicateCount += 1
-                logPath = Path(
-                        logPath.parent,
-                        logPath.stem + f"({ duplicateCount })" + logPath.suffix,
-                )
+        logPath = util.incrementPathIfExist(logPath)
+        os.makedirs(logPath.parent, exist_ok=True)
 
         # Set up looger
         handler = RotatingFileHandler(
@@ -498,9 +483,6 @@ class Monitor:
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
-
-                        if self.checkInterval == self.checkIntervalNormal:
-                            self.checkInterval = self.checkIntervalLong
                         break
                     # }}}
                     elif stateName == "noAlert": # {{{

@@ -27,7 +27,7 @@ LASER_OCR_FIX_PATH  = Path(cfg.paths.otto, r"辅助程序/激光名称OCR修复�
 MESSAGEBOX_TITLE = "激光开料"
 pr = util.pr
 
-def getWorkbook() -> Workbook:
+def getWorkbook(dstPath: Path) -> Tuple[Workbook, Path]:
     """
     Loads or creates an Excel workbook for cut records.
 
@@ -35,10 +35,15 @@ def getWorkbook() -> Workbook:
         openpyxl.Workbook: Existing workbook if CUT_RECORD_PATH exists,
                            otherwise a new Workbook instance.
     """
-    if CUT_RECORD_PATH.exists():
-        return load_workbook(str(CUT_RECORD_PATH))
+    if dstPath.exists():
+        try:
+            return load_workbook(str(dstPath)), dstPath
+        except ValueError:
+            dstPath = util.incrementPathIfExist(dstPath)
+            return Workbook(), dstPath
     else:
-        return Workbook()
+        dstPath = util.incrementPathIfExist(dstPath)
+        return Workbook(), dstPath
 
 
 screenshotPaths = []
@@ -127,6 +132,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
         return os.startfile(CUT_RECORD_PATH)
     elif "shfit" in keySet.keys:
         return relinkScreenshots()
+    cutRecordPath = CUT_RECORD_PATH
 
     # Get laser file info
     hwndTitles = {}
@@ -164,7 +170,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
     screenshotPath = util.screenshotSave(screenshot, "屏幕截图", SCREENSHOT_DIR_PATH)
 
     # Using OCR to get process count
-    wb = getWorkbook()
+    wb, cutRecordPath = getWorkbook(cutRecordPath)
     sheetName = screenshotPath.stem[5:12]
     try:
         ws = wb[sheetName]
@@ -178,7 +184,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
         ws["F1"].value = "截图文件"
 
     newRecord(ws, screenshotPath, partFileName, excelTimeStamp)
-    savePath = util.saveWorkbook(wb, CUT_RECORD_PATH)
+    savePath = util.saveWorkbook(wb, cutRecordPath)
 
     if os.getlogin() != "OT03":
         shutil.copy2(savePath, Path(SCREENSHOT_DIR_PATH, "开料记录.xlsx"))
@@ -362,7 +368,8 @@ def updateScreenshotRecords():  # {{{
         Modifies the workbook by adding new records when appropriate
         Saves the workbook to CUT_RECORD_PATH
     """
-    wb = getWorkbook()
+    cutRecordPath = CUT_RECORD_PATH
+    wb, cutRecordPath = getWorkbook(cutRecordPath)
     initSheetFromScreenshots(wb)
     for p in screenshotPaths:
         sheetName = p.stem[5:12]
@@ -415,10 +422,11 @@ def relinkScreenshots():
 
     Note: Requires 'ctrl' key in keySet to execute the file opening operation.
     """
+    cutRecordPath = CUT_RECORD_PATH
     if "ctrl" in keySet.keys:
-        return os.startfile(CUT_RECORD_PATH)
+        return os.startfile(cutRecordPath)
     # TODO: highlight invalid ones
-    wb = getWorkbook()
+    wb, cutRecordPath = getWorkbook(cutRecordPath)
     for ws in wb.worksheets:
         if ws.max_row < 2:
             continue

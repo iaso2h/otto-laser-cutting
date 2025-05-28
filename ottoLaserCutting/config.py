@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.141"
+VERSION     = "0.0.142"
 LASTUPDATED = "2025-05-27"
 
 import sys
@@ -45,10 +45,10 @@ class Paths:
     def __post_init__(self, _otto, _warehousing):
         self.otto        = Path(_otto)
         if not self.otto.exists():
-            print("f{self.otto} doesn't exist.")
+            print(f"{self.otto} doesn't exist.")
         self.warehousing = Path(_warehousing)
         if not self.warehousing.exists():
-            print("f{self.warehousing} doesn't exist.")
+            print(f"{self.warehousing} doesn't exist.")
 
 @dataclass
 class Pats:
