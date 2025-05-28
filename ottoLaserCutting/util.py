@@ -236,21 +236,29 @@ def screenshotSave(screenshot: Image, namePrefix: str, dstDirPath: Path) -> Path
 
 fileNameIncreamentPat = re.compile(r"^(.*)\((\d)+\)$")
 def incrementPathIfExist(p: Path) -> Path:
+    if not p.exists():
+        return p
+
     duplicateCount = 1
-    while p.exists():
+    while True:
         match = fileNameIncreamentPat.match(p.stem)
         if match:
             duplicateCount = int(match.group(2))
             duplicateCount += 1
             p = Path(
                     p.parent,
-                    fileNameIncreamentPat.sub(rf"\1({duplicateCount})", p.stem + p.suffix)
+                    fileNameIncreamentPat.sub(
+                        rf"\1({duplicateCount})",
+                        p.stem
+                    ) + p.suffix
             )
+            if not p.exists():
+                return p
         else:
             duplicateCount += 1
             p = Path(
                     p.parent,
                     p.stem + f"({ duplicateCount })" + p.suffix,
             )
-
-    return p
+            if not p.exists():
+                return p

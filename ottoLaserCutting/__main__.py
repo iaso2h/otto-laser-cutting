@@ -11,9 +11,6 @@ if __name__ == "__main__":
     argParser.add_argument("-D", "--dev", action="store_true")
     argParser.add_argument("-R", "--rtf", action="store_true")
     args = argParser.parse_args()
-    # import tubeProMonitor
-    # tubeProMonitor.monitor = tubeProMonitor.Monitor()
-    #
     if args.rtf:
         rtfParse.parseAllLog()
     else:
