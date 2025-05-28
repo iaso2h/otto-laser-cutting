@@ -42,7 +42,6 @@ def getWorkbook(dstPath: Path) -> Tuple[Workbook, Path]:
             dstPath = util.incrementPathIfExist(dstPath)
             return Workbook(), dstPath
     else:
-        dstPath = util.incrementPathIfExist(dstPath)
         return Workbook(), dstPath
 
 
