@@ -247,7 +247,10 @@ def incrementPathIfExist(p: Path) -> Path:
             duplicateCount += 1
             p = Path(
                     p.parent,
-                    fileNameIncreamentPat.sub(rf"\1({duplicateCount})", p.stem + p.suffix)
+                    fileNameIncreamentPat.sub(
+                        rf"\1({duplicateCount})",
+                        p.stem
+                    ) + p.suffix
             )
             if not p.exists():
                 return p

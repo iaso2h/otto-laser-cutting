@@ -410,5 +410,7 @@ def exportDimensions():
     # ws.protection.password = '456'
     # ws.protection.enable()
 
-    savePath = util.saveWorkbook(wb, dstPath1, True)
-    savePath = util.saveWorkbook(wb, dstPath2, False)
+    if dstPath1.exists():
+        savePath = util.saveWorkbook(wb, dstPath1, True)
+    if dstPath2.exists():
+        savePath = util.saveWorkbook(wb, dstPath2, False)
