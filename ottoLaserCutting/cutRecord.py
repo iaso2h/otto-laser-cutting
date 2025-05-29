@@ -162,6 +162,9 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
 
     if not screenshot:
         screenshot = ImageGrab.grab()
+        screenshotProvidedChk = True
+    else:
+        screenshotProvidedChk = False
 
     # Check current foreground program
     datetimeNow = datetime.datetime.now()
@@ -188,17 +191,18 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
     if os.getlogin() != "OT03":
         shutil.copy2(savePath, Path(SCREENSHOT_DIR_PATH, "开料记录.xlsx"))
 
-    win32api.MessageBox(
-                None,
-                f"记录成功",
-                MESSAGEBOX_TITLE,
-                4096 + 64 + 0
-            )
-    #   MB_SYSTEMMODAL==4096
-    ##  Button Styles:
-    ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
-    ##  To also change icon, add these values to previous number
-    ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
+    if not screenshotProvidedChk:
+        win32api.MessageBox(
+                    None,
+                    f"记录成功",
+                    MESSAGEBOX_TITLE,
+                    4096 + 64 + 0
+                )
+        #   MB_SYSTEMMODAL==4096
+        ##  Button Styles:
+        ### 0:OK  --  1:OK|Cancel -- 2:Abort|Retry|Ignore -- 3:Yes|No|Cancel -- 4:Yes|No -- 5:Retry|No -- 6:Cancel|Try Again|Continue
+        ##  To also change icon, add these values to previous number
+        ### 16 Stop-sign  ### 32 Question-mark  ### 48 Exclamation-point  ### 64 Information-sign ('i' in a circle)
 # }}}
 
 

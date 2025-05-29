@@ -360,32 +360,7 @@ class Monitor:
                             # is a blocking call—it halts the thread so we need
                             # to make sure it call in a new thread then
                             # complete thread after 5 seconds
-                            screenshotOnCompletionDone = threading.Event()
-                            def screenshotOnCompletion(screenshot):
-                                try:
-                                    cutRecord.takeScreenshot(screenshot)
-                                finally:
-                                    screenshotOnCompletionDone.set()  # Signal completion
-                            curRecordThread = threading.Thread(target=screenshotOnCompletion)
-                            curRecordThread.start()
-
-
-                            self.logger.info("Finding messagebox window.")
-                            messageBoxHwnd = cutRecord.findMessageBoxWindow()
-                            if messageBoxHwnd:
-                                self.logger.info("Close message window in 5s.")
-                                time.sleep(5)
-                                ctypes.windll.user32.PostMessageW(messageBoxHwnd, win32con.WM_CLOSE, 0, 0)
-                            else:
-                                self.logger.warning("Can't find message window.")
-
-                            if screenshotOnCompletionDone.is_set():
-                                self.logger.info("Screenshot task completed.")
-                            else:
-                                self.logger.info("Screenshot task running in background.")
-
-
-                            curRecordThread.join() # Ensure the thread completes
+                            cutRecord.takeScreenshot(screenshot)
 
                             # Make records for monitoring
                             os.makedirs(MONITOR_PIC, exist_ok=True)
@@ -393,7 +368,7 @@ class Monitor:
                             self.logger.info(f"Save screenshot at {screenshotPath}")
 
                             # Send email notification
-                            self.logger.info("Close message window in 5s.")
+                            self.logger.info("Sending email")
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
                             # Check off-work hours and shutdown if necessary
@@ -402,7 +377,8 @@ class Monitor:
                                 subprocess.call(["shutdown", "-s"])
                                 pr("Currently it's off-work hours, shutdown the machine.")
                                 self.logger.warning("Currently it's off-work hours, shutdown the machine.")
-
+                            else:
+                                self.logger.warning("Currently it's work time right now, no paln for shuting down the machine.")
 
                         break
                     # }}}
@@ -500,7 +476,7 @@ class Monitor:
                                 self.logger.info("Alert cleared. Back to the track")
                             if tubeProTitleLastCompletion:
                                 tubeProTitleLastCompletion = ""
-
+                                self.logger.info("Clear latst completion title. Back to the track")
                         break
                     # }}}
 
