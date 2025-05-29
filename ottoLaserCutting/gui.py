@@ -19,7 +19,7 @@ dpg.add_font_range(0x0001, 0x9FFF, parent=fontName)
 dpg.bind_font(fontName)
 
 dpg.create_viewport(
-        title="ottoLaserCutting",
+        title="OttoLaserCutting",
         decorated=False,
         x_pos=cfg.geometry.xPos,
         y_pos=cfg.geometry.yPos,

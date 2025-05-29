@@ -1,7 +1,7 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.144"
+VERSION     = "0.0.145"
 LASTUPDATED = "2025-05-28"
 
 import sys
@@ -10,23 +10,8 @@ import json
 import re
 from pathlib import Path
 from dataclasses import dataclass, InitVar, field
-from typing import Optional
+from typing import Optional, cast
 from datetime import datetime
-locale.setlocale(locale.LC_TIME, '')
-if getattr(sys, 'frozen', False):
-    # If the application is run as a bundle, the PyInstaller bootloader
-    # extends the sys module by a flag frozen=True and sets the app
-    # path into variable _MEIPASS'.
-    BUNDLE_MODE = True
-    BUNDLE_PATH = Path(sys._MEIPASS)  # type: ignore
-    EXECUTABLE_DIR = Path(sys.executable).parent
-else:
-    BUNDLE_MODE = False
-    EXECUTABLE_DIR = Path(__file__).parent.parent
-EXTERNAL_CONFIG = Path(EXECUTABLE_DIR, "configuration.json")
-if not EXTERNAL_CONFIG.exists():
-    raise FileExistsError(f"Can't find external configuration at: {str(EXTERNAL_CONFIG)}.")
-LAUNCH_TIME = datetime.now()
 
 @dataclass
 class Geometry:
@@ -46,6 +31,7 @@ class Paths:
         self.otto        = Path(_otto)
         if not self.otto.exists():
             print(f"{self.otto} doesn't exist.")
+            sys.exit()
         self.warehousing = Path(_warehousing)
         if not self.warehousing.exists():
             print(f"{self.warehousing} doesn't exist.")
@@ -78,7 +64,22 @@ class Configuration:
     patterns: Pats
     email: Email
 
+locale.setlocale(locale.LC_TIME, '')
 
+if getattr(sys, 'frozen', False):
+    # If the application is run as a bundle, the PyInstaller bootloader
+    # extends the sys module by a flag frozen=True and sets the app
+    # path into variable _MEIPASS'.
+    BUNDLE_MODE = True
+    BUNDLE_PATH = Path(sys._MEIPASS)  # type: ignore
+    EXECUTABLE_DIR = Path(sys.executable).parent
+else:
+    BUNDLE_MODE = False
+    EXECUTABLE_DIR = Path(__file__).parent.parent
+EXTERNAL_CONFIG = Path(EXECUTABLE_DIR, "configuration.json")
+if not EXTERNAL_CONFIG.exists():
+    raise FileExistsError(f"Can't find external configuration at: {str(EXTERNAL_CONFIG)}.")
+LAUNCH_TIME = datetime.now()
 # Load JSON and convert to dataclass
 with open(EXTERNAL_CONFIG, "r", encoding="utf-8") as f:
     data = json.load(f)
@@ -97,10 +98,5 @@ with open(EXTERNAL_CONFIG, "r", encoding="utf-8") as f:
         # patterns=Pats(**data["patterns"]),
         email=Email(**data["email"])
     )
-
-
-if not Path(cfg.paths.otto).exists():
-    print('无法找到"欧拓图纸"文件夹')
-    sys.exit()
 
 LASER_FILE_DIR_PATH  = Path(cfg.paths.otto, r"切割文件")
