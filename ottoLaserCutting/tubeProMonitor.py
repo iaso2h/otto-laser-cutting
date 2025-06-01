@@ -360,7 +360,6 @@ class Monitor:
                             # is a blocking call—it halts the thread so we need
                             # to make sure it call in a new thread then
                             # complete thread after 5 seconds
-                            pr("DEBUGPRINT[22]: tubeProMonitor.py:363 (before cutRecord.takeScreenshot(screenshot))")
                             cutRecord.takeScreenshot(screenshot)
                             pr("DEBUGPRINT[23]: tubeProMonitor.py:364 (after cutRecord.takeScreenshot(screenshot))")
 
@@ -369,7 +368,7 @@ class Monitor:
                             os.makedirs(MONITOR_PIC, exist_ok=True)
                             pr("DEBUGPRINT[25]: tubeProMonitor.py:369 (after os.makedirs(MONITOR_PIC, exist_ok=True))")
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
-                            pr("DEBUGPRINT[26]: tubeProMonitor.py:371 (after screenshotPath = util.screenshotSave(scr…)")
+                            self.logger.info(f"Save screenshot at {screenshotPath}")
 
                             # Send email notification
                             self.logger.info("Sending email...")
