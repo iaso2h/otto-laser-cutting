@@ -37,12 +37,14 @@ def getWorkbook(dstPath: Path) -> Tuple[Workbook, Path]:
     """
     if dstPath.exists():
         try:
-            return load_workbook(str(dstPath)), dstPath
-        except ValueError:
+            wb = load_workbook(str(dstPath))
+        except:
+            wb = Workbook()
             dstPath = util.incrementPathIfExist(dstPath)
-            return Workbook(), dstPath
+        finally:
+            return wb, dstPath
     else:
-        return Workbook(), dstPath
+        return Workbook(), dstPat
 
 
 screenshotPaths = []
@@ -162,16 +164,15 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
 
     if not screenshot:
         screenshot = ImageGrab.grab()
-        screenshotProvidedChk = True
-    else:
         screenshotProvidedChk = False
+    else:
+        screenshotProvidedChk = True
 
     # Check current foreground program
     datetimeNow = datetime.datetime.now()
     excelTimeStamp = datetimeNow.strftime("%Y/%m/%d %H:%M:%S")
     screenshotPath = util.screenshotSave(screenshot, "屏幕截图", SCREENSHOT_DIR_PATH)
 
-    # Using OCR to get process count
     wb, cutRecordPath = getWorkbook(cutRecordPath)
     sheetName = screenshotPath.stem[5:12]
     try:
@@ -185,6 +186,7 @@ def takeScreenshot(screenshot: Optional[Image.Image] = None) -> None:  # {{{
         ws["E1"].value = "已切量/需求量"
         ws["F1"].value = "截图文件"
 
+    # Using OCR to get process count
     newRecord(ws, screenshotPath, partFileName, excelTimeStamp)
     savePath = util.saveWorkbook(wb, cutRecordPath)
 
@@ -336,17 +338,17 @@ def newRecord(ws: Worksheet, p: Path, partFileName: Optional[str]=None, timeStam
     if not partFileName or not timeStamp:
         partFileName, partProcessCount, timeStamp = getImgInfo(p)
     else:
-        reader = easyocr.Reader(["en"])
+        # reader = easyocr.Reader(["en"])
         partProcessCount = ""
-        with Image.open(str(p)) as img:
-            imgProcessCount = img.crop((550, 1665, 765, 1685))
-            cvProcessCount = numpy.array(imgProcessCount)[:, :, ::-1].copy()
-            processCountRead = reader.readtext(cvProcessCount)
-            if processCountRead:
-                if len(processCountRead) == 2:
-                    # In case recognition result is 2
-                    partProcessCount = processCountRead[1][1]
-                    partProcessCount = ILLEGAL_CHARACTERS_RE.sub("", partProcessCount)
+        # with Image.open(str(p)) as img:
+        #     imgProcessCount = img.crop((550, 1665, 765, 1685))
+        #     cvProcessCount = numpy.array(imgProcessCount)[:, :, ::-1].copy()
+        #     processCountRead = reader.readtext(cvProcessCount)
+        #     if processCountRead:
+        #         if len(processCountRead) == 2:
+        #             # In case recognition result is 2
+        #             partProcessCount = processCountRead[1][1]
+        #             partProcessCount = ILLEGAL_CHARACTERS_RE.sub("", partProcessCount)
 
     rowNew = ws.max_row + 1
     ws[f"A{rowNew}"].value = partFileName

@@ -360,16 +360,21 @@ class Monitor:
                             # is a blocking call—it halts the thread so we need
                             # to make sure it call in a new thread then
                             # complete thread after 5 seconds
+                            pr("DEBUGPRINT[22]: tubeProMonitor.py:363 (before cutRecord.takeScreenshot(screenshot))")
                             cutRecord.takeScreenshot(screenshot)
+                            pr("DEBUGPRINT[23]: tubeProMonitor.py:364 (after cutRecord.takeScreenshot(screenshot))")
 
                             # Make records for monitoring
+                            pr("DEBUGPRINT[24]: tubeProMonitor.py:368 (before os.makedirs(MONITOR_PIC, exist_ok=True))")
                             os.makedirs(MONITOR_PIC, exist_ok=True)
+                            pr("DEBUGPRINT[25]: tubeProMonitor.py:369 (after os.makedirs(MONITOR_PIC, exist_ok=True))")
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
-                            self.logger.info(f"Save screenshot at {screenshotPath}")
+                            pr("DEBUGPRINT[26]: tubeProMonitor.py:371 (after screenshotPath = util.screenshotSave(scr…)")
 
                             # Send email notification
-                            self.logger.info("Sending email")
+                            self.logger.info("Sending email...")
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
+                            self.logger.info("Email sent")
 
                             # Check off-work hours and shutdown if necessary
                             if self.offWorkShutdownChk(currentTime):
@@ -452,9 +457,6 @@ class Monitor:
                             else:
                                 pr("Alert is detected.")
                                 self.logger.warning("Alert is detected.")
-
-                            screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
-                            emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
