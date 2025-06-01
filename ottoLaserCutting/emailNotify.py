@@ -13,8 +13,8 @@ senderEmail   = cfg.email.senderAccount
 password      = cfg.email.senderPassword
 
 emailSubjectTemplateDict = {
-    "finished01":        "切割完成",
-    "finished02":        "切割完成",
+    "completion01":        "切割完成",
+    "completion02":        "切割完成",
     "pauseThenContinue": "切割头碰板",
     "alert":             "警报",
     "alertForceReturn":  "警报: 强制回原点",
@@ -26,7 +26,7 @@ def send(templateName: str, tubeProTitle: str, imagePath: Optional[Path] = None)
     Sends an email notification using SMTP_SSL, optionally with an image attachment.
 
     Args:
-        templateName (str): The email template name (e.g., "finished01").
+        templateName (str): The email template name (e.g., "completion01").
         tubeProTitle (str): The email message content.
         imagePath (str, optional): Path to the image file to attach. Defaults to None.
 
