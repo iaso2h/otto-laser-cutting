@@ -76,7 +76,7 @@ with dpg.window(
         no_horizontal_scroll=False,
     )
     def clearLog():
-        util.logFlow = ""
+        util.logFlow.clear()
         dpg.set_value("log", value=util.logFlow)
     def toggleLogTrackihg(sender, appData):
         currentTracked = dpg.get_item_configuration("log")["tracked"]
