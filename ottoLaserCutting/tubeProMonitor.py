@@ -33,12 +33,11 @@ else:
 MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
 MONITOR_LOG_PATH = Path(
     cfg.paths.otto,
-    rf'存档/切割机监视{config.LAUNCH_TIME.strftime("%Y%m%d")}.log'
+    rf'辅助程序/OttoLaserCutting/log/{config.LAUNCH_TIME.strftime("%Y%m%d")}.log'
 )
 
 
 pr = util.pr
-monitor = None
 
 
 class Monitor:
@@ -174,7 +173,7 @@ class Monitor:
                     return
         # }}}
 
-    def startMonitoring(self) -> None:
+    def _startMonitoring(self) -> None:
         """
         Starts the monitoring process in a separate daemon thread if enabled.
         Prints status messages and returns immediately if monitoring is disabled.
@@ -184,7 +183,7 @@ class Monitor:
         self.logger.info("Monitoring started.")
         threading.Thread(target=self._monitor_loop, daemon=True).start()
 
-    def stopMonitoring(self) -> None:
+    def _stopMonitoring(self) -> None:
         """Stops the monitoring process if it's currently running.
 
         Displays a confirmation dialog asking whether to stop monitoring.
@@ -218,9 +217,9 @@ class Monitor:
             self.logger.info("Monitoring is unavailable due to missing or invalid templates.")
             return
         if self.isRunning:
-            self.stopMonitoring()
+            self._stopMonitoring()
         else:
-            self.startMonitoring()
+            self._startMonitoring()
 
     def offWorkShutdownChk(self, currentTime: datetime) -> bool:
         """
@@ -546,3 +545,8 @@ class Monitor:
                 return None
         else:
             return ImageGrab.grab()
+
+
+
+
+monitor: Optional[Monitor] = None

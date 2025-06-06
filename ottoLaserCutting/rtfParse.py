@@ -294,7 +294,7 @@ def parseAllLog():
     """
     wb = Workbook()
     for f in Path(TUBEPRO_LOG_PATH).iterdir():
-        if f.suffix != ".rtf" or "精简" in f.stem:
+        if f.suffix != ".rtf":
             continue
 
         wb = parse(
@@ -321,7 +321,7 @@ def parseAccuLog():
     timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
     for f in Path(TUBEPRO_LOG_PATH).iterdir():
-        if f.suffix != ".rtf" or "精简" in f.stem:
+        if f.suffix != ".rtf":
             continue
 
         logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
@@ -375,7 +375,7 @@ def parsePeriodLog():
         timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
         for f in Path(TUBEPRO_LOG_PATH).iterdir():
-            if f.suffix != ".rtf" or "精简" in f.stem:
+            if f.suffix != ".rtf":
                 continue
 
             logTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
@@ -426,7 +426,7 @@ def rtfSimplify():
         timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
         for f in TUBEPRO_LOG_PATH.iterdir():
-            if f.suffix != ".rtf" or "精简" in f.stem:
+            if f.suffix != ".rtf":
                 continue
 
             rtfTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
@@ -447,8 +447,10 @@ def rtfSimplify():
                         refineLines.append(line + "\n")
                 targetPath = Path(
                     f.parent,
-                    "精简" + f.stem + f.suffix
+                    "精简",
+                    f.stem + f.suffix
                 )
+                os.makedirs(targetPath.parent, exist_ok=True)
                 with open(targetPath, mode="w", encoding="utf-8") as f2:
                     for line in refineLines:
                         f2.write(line)

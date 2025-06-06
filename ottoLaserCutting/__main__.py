@@ -2,6 +2,7 @@ import config
 import rtfParse
 import hotkey
 import gui
+import tubeProMonitor
 
 import argparse
 
@@ -18,6 +19,8 @@ if __name__ == "__main__":
             on_press=hotkey.onPress, on_release=hotkey.onRelease
         )
         listener.start()
+        tubeProMonitor.monitor.toggleMonitoring() # type: ignore
+
         gui.dpg.show_viewport()
         gui.dpg.start_dearpygui()
         gui.dpg.destroy_context()
