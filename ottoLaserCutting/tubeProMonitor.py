@@ -8,13 +8,15 @@ import emailNotify
 import time
 from datetime import datetime, timedelta
 import os
-import ctypes
 import subprocess
 from typing import Optional, cast
 import cv2
 # from cv2.typing import MatLike
 import numpy as np
-import win32gui, win32process, win32api, win32con
+import win32gui
+import win32process
+import win32api
+import win32con
 import pywintypes
 import psutil
 from PIL import ImageGrab
@@ -22,7 +24,6 @@ import threading
 from pathlib import Path
 import copy
 import logging
-import re
 from logging.handlers import RotatingFileHandler
 
 if config.BUNDLE_MODE:
@@ -31,9 +32,9 @@ else:
     PIC_TEMPLATE = Path(config.EXECUTABLE_DIR, "src/monitorMatchTemplates")
 MONITOR_PIC = Path(cfg.paths.otto, r"存档/截图/监视")
 MONITOR_LOG_PATH = Path(
-        cfg.paths.otto,
-        rf'存档/切割机监视{config.LAUNCH_TIME.strftime("%Y%m%d")}.log'
-        )
+    cfg.paths.otto,
+    rf'存档/切割机监视{config.LAUNCH_TIME.strftime("%Y%m%d")}.log'
+)
 
 
 pr = util.pr
@@ -284,7 +285,6 @@ class Monitor:
             foregroundHWND        = win32gui.GetForegroundWindow()
             foregroundProcessId   = win32process.GetWindowThreadProcessId(foregroundHWND)[1]
             if foregroundProcessId <= 0 or psutil.Process(foregroundProcessId).name() != "TubePro.exe":
-                pr("TubePro isn't the foreground window.", gui=False)
                 self.logger.warning("TubePro isn't the foreground window.")
                 cursorPosCurrent = hotkey.mouse.position
 
@@ -309,7 +309,6 @@ class Monitor:
                                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                                     try:
                                         win32gui.SetForegroundWindow(hwnd)
-                                        pr("TubePro has been idle for too long and now it's been brought to the foreground window.")
                                         self.logger.info("TubePro has been idle for too long and now it's been brought to the foreground window.")
                                         cursorIdleCount = 0 # reset
                                     except pywintypes.error:
@@ -326,6 +325,7 @@ class Monitor:
 
             # Skip if the main window isn't in the front
             if not tubeProTitleCurrent.startswith("TubePro"):
+                self.logger.info("Skip due to tubePro isn't focus at the main window.")
                 continue
 
             # Capture window content from TubePro
@@ -347,7 +347,6 @@ class Monitor:
                 matchResult = cv2.matchTemplate(screenshotCV, template, cv2.TM_CCOEFF_NORMED)
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
-                    pr(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.", gui=False)
                     self.logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
                     if stateName == "completion02": # {{{
                         if tubeProTitleCurrent != tubeProTitleLastCompletion:
@@ -361,12 +360,9 @@ class Monitor:
                             # to make sure it call in a new thread then
                             # complete thread after 5 seconds
                             cutRecord.takeScreenshot(screenshot)
-                            pr("DEBUGPRINT[23]: tubeProMonitor.py:364 (after cutRecord.takeScreenshot(screenshot))")
 
                             # Make records for monitoring
-                            pr("DEBUGPRINT[24]: tubeProMonitor.py:368 (before os.makedirs(MONITOR_PIC, exist_ok=True))")
                             os.makedirs(MONITOR_PIC, exist_ok=True)
-                            pr("DEBUGPRINT[25]: tubeProMonitor.py:369 (after os.makedirs(MONITOR_PIC, exist_ok=True))")
                             screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
                             self.logger.info(f"Save screenshot at {screenshotPath}")
 
@@ -379,10 +375,9 @@ class Monitor:
                             if self.offWorkShutdownChk(currentTime):
                                 self.isRunning = False
                                 subprocess.call(["shutdown", "-s"])
-                                pr("Currently it's off-work hours, shutdown the machine.")
                                 self.logger.warning("Currently it's off-work hours, shutdown the machine.")
                             else:
-                                self.logger.warning("Currently it's work time right now, no paln for shuting down the machine.")
+                                self.logger.info("Currently it's work time right now, no plan for shuting down the machine.")
 
                         break
                     # }}}
@@ -403,8 +398,8 @@ class Monitor:
                                 int(currentTime.timestamp() - self.lastAlertTimeStamp)
                                 <= self.alertCooldown
                             ) or self.alertCount >= self.alertHaltThreshold:
-                                pr(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
-                                self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                pr(f"Temperarily disable auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times failed in {self.alertCooldown}s")
                                 if tubeProTitleCurrent == tubeProTitleLastAlert:
                                     break
 
@@ -415,11 +410,9 @@ class Monitor:
                                 if self.offWorkShutdownChk(currentTime):
                                     self.isRunning = False
                                     subprocess.call(["shutdown", "-s"])
-                                    pr("Currently it's off-work hours, shutdown the machine.")
                                     self.logger.warning("Currently it's off-work hours, shutdown the machine.")
                             else:
                                 if self.offWorkShutdownChk(currentTime):
-                                    pr("Cutting is paused, auto-click continue.")
                                     self.logger.warning("Cutting is paused, auto-click continue.")
                                     screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
                                     emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
@@ -430,7 +423,6 @@ class Monitor:
                                     hotkey.mouse.release(hotkey.Button.left)
                                     hotkey.mouse.position = savedPosition
                                 else:
-                                    pr("It' work time now, auto-click continue is disabled.")
                                     self.logger.info("It' work time now, auto-click continue is disabled.")
 
 
@@ -473,7 +465,6 @@ class Monitor:
                             if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp > self.alertCooldown):
                                 self.alertCount = 0
                                 self.tubeProTitleLastAlert = ""
-                                pr("Alert cleared. Back to the track")
                                 self.logger.info("Alert cleared. Back to the track")
                             if tubeProTitleLastCompletion:
                                 tubeProTitleLastCompletion = ""
@@ -490,8 +481,8 @@ class Monitor:
         """
         screenshot = self.captureWindow(-1)
         if screenshot is None:
-            pr(f"Caputre image failed")
-            self.logger.info(f"Caputre image failed")
+            pr("Caputre image failed")
+            self.logger.info("Caputre image failed")
             return
 
         # Convert to OpenCV format

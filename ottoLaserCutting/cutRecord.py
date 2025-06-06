@@ -338,17 +338,17 @@ def newRecord(ws: Worksheet, p: Path, partFileName: Optional[str]=None, timeStam
     if not partFileName or not timeStamp:
         partFileName, partProcessCount, timeStamp = getImgInfo(p)
     else:
-        # reader = easyocr.Reader(["en"])
+        reader = easyocr.Reader(["en"])
         partProcessCount = ""
-        # with Image.open(str(p)) as img:
-        #     imgProcessCount = img.crop((550, 1665, 765, 1685))
-        #     cvProcessCount = numpy.array(imgProcessCount)[:, :, ::-1].copy()
-        #     processCountRead = reader.readtext(cvProcessCount)
-        #     if processCountRead:
-        #         if len(processCountRead) == 2:
-        #             # In case recognition result is 2
-        #             partProcessCount = processCountRead[1][1]
-        #             partProcessCount = ILLEGAL_CHARACTERS_RE.sub("", partProcessCount)
+        with Image.open(str(p)) as img:
+            imgProcessCount = img.crop((550, 1665, 765, 1685))
+            cvProcessCount = numpy.array(imgProcessCount)[:, :, ::-1].copy()
+            processCountRead = reader.readtext(cvProcessCount)
+            if processCountRead:
+                if len(processCountRead) == 2:
+                    # In case recognition result is 2
+                    partProcessCount = processCountRead[1][1]
+                    partProcessCount = ILLEGAL_CHARACTERS_RE.sub("", partProcessCount)
 
     rowNew = ws.max_row + 1
     ws[f"A{rowNew}"].value = partFileName
