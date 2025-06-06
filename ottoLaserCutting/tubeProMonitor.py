@@ -265,6 +265,7 @@ class Monitor:
         tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
         tubeProTitleLastAlert      = ""
+        tubeProTitleLastNormal     = ""
         while self.isRunning:
             tubeProTitleCurrent = ""
             time.sleep(self.checkInterval)
@@ -349,7 +350,7 @@ class Monitor:
                 if maxVal >= self.similarityThreshold:
                     self.logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
                     if stateName == "completion02": # {{{
-                        if tubeProTitleCurrent != tubeProTitleLastCompletion:
+                        if tubeProTitleCurrent != tubeProTitleLastCompletion and tubeProTitleCurrent == tubeProTitleLastNormal:
                             tubeProTitleLastCompletion = tubeProTitleCurrent
 
                             pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
@@ -462,6 +463,7 @@ class Monitor:
                         )
                         _, maxValRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
                         if maxValRunning >= self.similarityThreshold:
+                            tubeProTitleLastNormal = tubeProTitleCurrent
                             if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp > self.alertCooldown):
                                 self.alertCount = 0
                                 self.tubeProTitleLastAlert = ""
