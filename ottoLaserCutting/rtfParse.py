@@ -7,24 +7,25 @@ import chardet
 import os
 import re
 import datetime
-from typing import Tuple, Optional
+from typing import Optional
 from collections import Counter
 from pathlib import Path
 from striprtf.striprtf import rtf_to_text
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
+from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.worksheet.worksheet import Worksheet
-from openpyxl.styles import Protection
+from openpyxl.styles import Protection, Alignment
 from pprint import pprint
 
 pr = util.pr
 LASER_PROFILE_PATH = Path(cfg.paths.otto, r"存档/耗时计算.xlsx")
-TUBEPRO_LOG_PATH   = Path(cfg.paths.otto, r"存档/切割机日志")
-laserFileOpenPat = re.compile(r"^\((.+?)\)打开文件：(.+)$")
-segmentFirstPat  = re.compile(r"^\((.+?)\)总零件数:(\d+), 当前零件序号:1$")
-segmentPat         = re.compile(r".*总零件数:(\d+), 当前零件序号:\d+$")
-scheduelTotalPat   = re.compile(r".*零件切割计划数目\d+.*$")
-scheduelLoopEndPat = re.compile(r".*已切割零件数目\d+.*$")
-loopStartPat       = re.compile(r".*开始加工, 循环计数：\d+.*$")
+TUBEPRO_LOG_PATH   = Path(cfg.paths.otto, r"存档/切割机日志/demo")
+fileOpenPat      = re.compile(r"^\(([0-9:\/ ]+?)\)打开文件：(.+)")
+segmentFirstPat  = re.compile(r"^\(([0-9:\/ ]+?)\)总零件数:(\d+), 当前零件序号:1$")
+segmentPat       = re.compile(r"^\(([0-9:\/ ]+?)\)总零件数:(\d+), 当前零件序号:(\d+)")
+scheduelTotalPat = re.compile(r"^\(([0-9:\/ ]+?)\).+零件切割计划数目(\d+)")
+loopEndPat       = re.compile(r"^\(([0-9:\/ ]+?)\).+已切割零件数目(\d+)")
+# loopStartPat     = re.compile(r"^\(([0-9:\/ ]+?)\)开始加工.{1,3}循环计数：(\d+)")
 
 
 def getEncoding(filePath) -> str:
@@ -215,11 +216,11 @@ def parse(
         lines = content.split("\n")
 
     laserFileFullPath = ""
-    for lineIdx, l in enumerate(lines):
-        openMatch      = laserFileOpenPat.match(l)
-        loopStartMatch = segmentFirstPat.match(l)
-        if openMatch:
-            laserFileFullPath = openMatch.group(2)
+    for lineIdx, line in enumerate(lines):
+        fileOpenMatch  = fileOpenPat.match(line)
+        loopStartMatch = segmentFirstPat.match(line)
+        if fileOpenMatch:
+            laserFileFullPath = fileOpenMatch.group(2)
             laserFileName = laserFileFullPath.replace("D:\\欧拓图纸\\切割文件\\", "")
             laserFileName = util.diametartSymbolUnify(laserFileName)
             laserFileName = laserFileName.replace(".zx", ".zzx")
@@ -235,7 +236,8 @@ def parse(
                     "workpieceCount": 0
                 }
                 loopLastTime = None
-            parsedResult[laserFileName]["open"].append(( lineIdx, openMatch.group(1) ))
+            parsedResult[laserFileName]["open"].append(( lineIdx, fileOpenMatch.group(1) ))
+
 
         if loopStartMatch:
             timeStamp = loopStartMatch.group(1)
@@ -415,8 +417,9 @@ def rtfSimplify():
     else:
         timeDeltaLiteral = 1
 
-    now = datetime.datetime.now()
+
     parsedPeriodCount = 0
+    cuttingSessions = []
     for loopCount in range(3):
         if parsedPeriodCount > 0:
             break
@@ -425,36 +428,193 @@ def rtfSimplify():
             timeDeltaLiteral = timeDeltaLiteral * (7 ** loopCount)
         timeDelta = datetime.timedelta(days=timeDeltaLiteral)
 
-        for f in TUBEPRO_LOG_PATH.iterdir():
-            if f.suffix != ".rtf":
+        # Iterating through all rtf files
+        for rtfFile in TUBEPRO_LOG_PATH.glob("*.rtf"):
+            now = datetime.datetime.now()
+            rtfCreationTime = datetime.datetime.fromtimestamp(rtfFile.stat().st_ctime)
+            if now - rtfCreationTime > timeDelta:
                 continue
+            with open(rtfFile, "r", encoding=getEncoding(str(rtfFile))) as f:
+                rtfContent = f.read()
+                content = rtf_to_text(rtfContent)
+                lines = content.split("\n")
 
-            rtfTime = datetime.datetime.fromtimestamp(f.stat().st_ctime)
-            if now - rtfTime <= timeDelta:
-                with open(f, "r", encoding=getEncoding(str(f))) as f1:
-                    content = rtf_to_text(f1.read())
-                    lines = content.split("\n")
-                refineLines = []
-                for line in lines:
-                    m1 = laserFileOpenPat.match(line)
-                    m2 = segmentPat.match(line)
-                    m3 = scheduelTotalPat.match(line)
-                    m4 = scheduelLoopEndPat.match(line)
-                    m5 = loopStartPat.match(line)
-                    if not any((m1, m2, m3, m4, m5)):
-                        continue
-                    else:
-                        refineLines.append(line + "\n")
-                targetPath = Path(
-                    f.parent,
-                    "精简",
-                    f.stem + f.suffix
-                )
-                os.makedirs(targetPath.parent, exist_ok=True)
+            # Itering through all lines in rtf file to filter out the lines
+            refinedLines = []
+            for line in lines:
+                fileOpenMatch      = fileOpenPat.match(line)
+                segmentMatch       = segmentPat.match(line)
+                scheduelTotalMatch = scheduelTotalPat.match(line)
+                loopEndMatch       = loopEndPat.match(line)
+                if not any((
+                    fileOpenMatch,
+                    segmentMatch,
+                    scheduelTotalMatch,
+                    loopEndMatch,
+                )):
+                    continue
+
+                if fileOpenMatch:
+                    timeStamp = fileOpenMatch.group(1)
+                    currentFileOpen = Path(fileOpenMatch.group(2)).stem
+                    currentFileOpen = currentFileOpen.replace("_X1", "")
+                    timeObj = datetime.datetime.strptime(
+                        f"{now.year}/{timeStamp}",
+                        "%Y/%m/%d %H:%M:%S"
+                    )
+                    if not cuttingSessions or cuttingSessions[len(cuttingSessions) - 1]["fileName"]["value"] != currentFileOpen:
+                        cuttingSession = {
+                            "fileName":       {"value": currentFileOpen, "updatedTime": timeObj },
+                            "startCount":     {"value": -1, "updatedTime": timeObj },
+                            "segmentTotal":   {"value": 0, "updatedTime": None},
+                            "segmentCount":   {"value": 0, "updatedTime": None},
+                            "scheduleTotal":  {"value": 0, "updatedTime": None},
+                            "loopEndCount":   {"value": 0, "updatedTime": None},
+                            "totalCount":     {"value": 0, "updatedTime": None},
+                        }
+                        cuttingSessions.append(cuttingSession)
+
+
+                if segmentMatch:
+                    timeStamp = segmentMatch.group(1)
+                    timeObj = datetime.datetime.strptime(
+                        f"{now.year}/{timeStamp}",
+                        "%Y/%m/%d %H:%M:%S"
+                    )
+                    cuttingSessions[len(cuttingSessions) - 1]["segmentTotal"] = {
+                        "value": int(segmentMatch.group(2)),
+                        "updatedTime": timeObj
+                    }
+                    cuttingSessions[len(cuttingSessions) - 1]["segmentCount"] = {
+                        "value": int(segmentMatch.group(3)),
+                        "updatedTime": timeObj
+                    }
+                if scheduelTotalMatch:
+                    timeStamp = scheduelTotalMatch.group(1)
+                    timeObj = datetime.datetime.strptime(
+                        f"{now.year}/{timeStamp}",
+                        "%Y/%m/%d %H:%M:%S"
+                    )
+                    cuttingSessions[len(cuttingSessions) - 1]["scheduleTotal"] = {
+                        "value": int(scheduelTotalMatch.group(2)),
+                        "updatedTime": timeObj
+                    }
+                if loopEndMatch:
+                    timeStamp = loopEndMatch.group(1)
+                    timeObj = datetime.datetime.strptime(
+                        f"{now.year}/{timeStamp}",
+                        "%Y/%m/%d %H:%M:%S"
+                    )
+                    cuttingSessions[len(cuttingSessions) - 1]["loopEndCount"] = {
+                        "value": int(loopEndMatch.group(2)),
+                        "updatedTime": timeObj
+                    }
+                    # determin whether the cutting session was starting from 0
+                    if cuttingSessions[len(cuttingSessions) - 1]["startCount"]["value"] == -1:
+                        if cuttingSessions[len(cuttingSessions) - 1]["loopEndCount"]["value"] == cuttingSessions[len(cuttingSessions) - 1]["segmentTotal"]["value"]:
+                            cuttingSessions[len(cuttingSessions) - 1]["startCount"]["value"] = 0
+                        else:
+                            cuttingSessions[len(cuttingSessions) - 1]["startCount"]["value"] = (
+                                cuttingSessions[len(cuttingSessions) - 1]["loopEndCount"]["value"]
+                                - cuttingSessions[len(cuttingSessions) - 1]["segmentTotal"]["value"]
+                            )
+                            if cuttingSessions[len(cuttingSessions) - 1]["startCount"]["value"] < 0:
+                                cuttingSessions[len(cuttingSessions) - 1]["startCount"]["value"] = 0
+
+
+
+                refinedLines.append(line + "\n")
+            targetPath = Path(
+                rtfFile.parent,
+                "精简",
+                rtfFile.stem + rtfFile.suffix
+            )
+            os.makedirs(targetPath.parent, exist_ok=True)
+            try:
                 with open(targetPath, mode="w", encoding="utf-8") as f2:
-                    for line in refineLines:
+                    for line in refinedLines:
                         f2.write(line)
-                pr("导出日志: ", str(targetPath))
+                finishTime = datetime.datetime.now()
+                delta = finishTime - now
+                pr(f"导出文件: {str(rtfFile)}，耗时: {delta.total_seconds()}秒")
                 parsedPeriodCount += 1
+            except PermissionError:
+                pr(f"无法写入文件: {str(targetPath)}，请检查文件是否被占用或权限设置。")
 
-    pr("rtf日志精简完成")
+    # Compute the total count of for every file opened in every session
+    for session in cuttingSessions:
+        if session["loopEndCount"]["updatedTime"] and session["loopEndCount"]["updatedTime"] > session["segmentCount"]["updatedTime"]:
+            session["totalCount"]["value"] = session["loopEndCount"]["value"]
+            session["totalCount"]["updatedTime"] = session["loopEndCount"]["updatedTime"]
+        else:
+            session["totalCount"]["value"] = session["segmentCount"]["value"] + session["loopEndCount"]["value"]
+            session["totalCount"]["updatedTime"] = session["segmentCount"]["updatedTime"]
+
+        # Rectify the start count if the cutting session wasn't starting from 0
+        if session["startCount"]["value"] == -1 and session["loopEndCount"]["value"] == 0:
+            session["startCount"]["value"] = 0
+
+
+    # Exporting cuttingSessions data into Excel file
+    wb = Workbook()
+    ws = wb.active # type: Worksheet
+    ws["A1"].value = "排样名称"
+    ws.column_dimensions["A"].width = 50
+    ws["B1"].value = "开始时间"
+    ws.column_dimensions["B"].width = 22
+    ws["C1"].value = "结束时间"
+    ws.column_dimensions["C"].width = 22
+    ws["D1"].value = "耗时"
+    ws.column_dimensions["D"].width = 12.5
+    ws["E1"].value = "开始数量"
+    ws.column_dimensions["E"].width = 10
+    ws["F1"].value = "结束数量"
+    ws.column_dimensions["F"].width = 10
+    ws["G1"].value = "目标数量"
+    ws.column_dimensions["G"].width = 10
+    skipCount = 0
+    for sessionIdx, session in enumerate(cuttingSessions):
+        if session["totalCount"]["value"] == 0:
+            skipCount += 1
+            continue
+        row = 2 + sessionIdx - skipCount
+        ws[f"A{row}"].value = session["fileName"]["value"]
+        ws[f"A{row}"].alignment = Alignment(wrapText = True)
+        ws[f"B{row}"].value = session["fileName"]["updatedTime"].strftime("%Y/%m/%d %H:%M:%S")
+        ws[f"B{row}"].number_format = "yyyy/m/d h:mm:ss"
+        ws[f"C{row}"].value = session["totalCount"]["updatedTime"].strftime("%Y/%m/%d %H:%M:%S")
+        ws[f"C{row}"].number_format = "yyyy/m/d h:mm:ss"
+        ws[f"D{row}"].value = f'=C{row}-B{row}'
+        ws[f"D{row}"].number_format = "[h]时mm分ss秒"
+        ws[f"E{row}"].value = session["startCount"]["value"]
+        ws[f"F{row}"].value = session["totalCount"]["value"]
+        ws[f"G{row}"].value = session["scheduleTotal"]["value"]
+
+
+    # Add table
+    tab = Table(displayName="Table1", ref=f"A1:G{ws.max_row}")
+
+    # Add printable area
+    ws.oddFooter.center.text = "第 &[Page] 页，共 &N 页" # type: ignore
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+    ws.print_title_rows = "2:2"
+    ws.print_area = f"A1:G{ws.max_row}"
+
+    # Add a default style with striped rows and banded columns
+    style = TableStyleInfo(
+            name="TableStyleMedium24",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=False
+            )
+    tab.tableStyleInfo = style
+    ws.add_table(tab)
+    util.saveWorkbook(wb)
+
+
+    if cuttingSessions:
+        pr("rtf日志精简完成")
+    else:
+        pr("没有rtf日志被分析")

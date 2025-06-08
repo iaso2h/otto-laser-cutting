@@ -4,6 +4,7 @@ import hotkey
 import gui
 import tubeProMonitor
 
+import sys
 import argparse
 
 
@@ -19,7 +20,7 @@ if __name__ == "__main__":
             on_press=hotkey.onPress, on_release=hotkey.onRelease
         )
         listener.start()
-        tubeProMonitor.monitor.toggleMonitoring() # type: ignore
+        # tubeProMonitor.monitor.toggleMonitoring() # type: ignore
 
         gui.dpg.show_viewport()
         gui.dpg.start_dearpygui()

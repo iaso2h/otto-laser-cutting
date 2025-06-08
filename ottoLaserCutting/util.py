@@ -234,7 +234,7 @@ def screenshotSave(screenshot: Image, namePrefix: str, dstDirPath: Path) -> Path
     return screenshotPath
 
 
-fileNameIncreamentPat = re.compile(r"^(.*)\((\d)+\)$")
+fileNameIncreamentPat = re.compile(r"^(.*)\((\d+)\)$")
 def incrementPathIfExist(p: Path) -> Path:
     if not p.exists():
         return p

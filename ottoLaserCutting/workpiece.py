@@ -8,7 +8,7 @@ import re
 import os
 import json
 import datetime
-import win32api, win32con
+import win32api
 from openpyxl import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.comments import Comment

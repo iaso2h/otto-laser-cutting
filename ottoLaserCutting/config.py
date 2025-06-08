@@ -1,8 +1,8 @@
 # File: parseTubeProLog
 # Author: iaso2h
 # Description: Parsing Log files(.rtf) from TubePro and split them into separated files
-VERSION     = "0.0.149b"
-LASTUPDATED = "2025-06-06"
+VERSION     = "0.0.150"
+LASTUPDATED = "2025-06-08"
 
 import sys
 import locale
@@ -13,12 +13,14 @@ from dataclasses import dataclass, InitVar, field
 from typing import Optional, cast
 from datetime import datetime
 
+
 @dataclass
 class Geometry:
     xPos: int
     yPos: int
     width: int
     height: int
+
 
 @dataclass
 class Paths:
@@ -36,6 +38,7 @@ class Paths:
         if not self.warehousing.exists():
             print(f"{self.warehousing} doesn't exist.")
 
+
 @dataclass
 class Pats:
     laserFile:           re.Pattern = field(init=False)
@@ -48,6 +51,7 @@ class Pats:
         self.laserFile = re.compile(_laserFile)
         self.workpieceDimension = re.compile(_workpieceDimension)
 
+
 @dataclass
 class Email:
     sslPort: int
@@ -55,6 +59,7 @@ class Email:
     senderAccount: str
     senderPassword: str
     receiverAccounts: list[str]
+
 
 @dataclass
 class Configuration:
