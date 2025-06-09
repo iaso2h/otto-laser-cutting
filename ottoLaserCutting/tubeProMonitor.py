@@ -304,13 +304,13 @@ class Monitor:
                                 _, pId = win32process.GetWindowThreadProcessId(hwnd)
                                 pName = psutil.Process(pId).name()
                                 if pName == "TubePro.exe":
-                                    tubeProTitleCurrent = title
                                     if win32gui.IsIconic(hwnd):
                                         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                                     try:
                                         win32gui.SetForegroundWindow(hwnd)
                                         self.logger.info("TubePro has been idle for too long and now it's been brought to the foreground window.")
                                         cursorIdleCount = 0 # reset
+                                        tubeProTitleCurrent = title
                                     except pywintypes.error:
                                         self.logger.error("Failed to bring tubePro window to the front.")
 
@@ -349,7 +349,10 @@ class Monitor:
                 if maxVal >= self.similarityThreshold:
                     self.logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
                     if stateName == "completion02": # {{{
-                        if tubeProTitleCurrent != tubeProTitleLastCompletion and tubeProTitleCurrent == tubeProTitleLastNormal:
+                        if tubeProTitleCurrent != tubeProTitleLastCompletion:
+                            # if tubeProTitleCurrent != tubeProTitleLastNormal:
+                            #     break
+
                             tubeProTitleLastCompletion = tubeProTitleCurrent
 
                             pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
@@ -369,7 +372,6 @@ class Monitor:
                             # Send email notification
                             self.logger.info("Sending email...")
                             emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
-                            self.logger.info("Email sent")
 
                             # Check off-work hours and shutdown if necessary
                             if self.offWorkShutdownChk(currentTime):
@@ -382,6 +384,8 @@ class Monitor:
                         break
                     # }}}
                     elif stateName == "paused": # {{{
+                        tubeProTitleLastCompletion = ""
+
                         matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templatePausedCuttingHeadTouch,
@@ -429,6 +433,8 @@ class Monitor:
                         break
                     # }}}
                     elif stateName == "alert": # {{{
+                        tubeProTitleLastCompletion = ""
+
                         self.lastAlertTimeStamp = currentTime.timestamp()
                         matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
                             screenshotCV,
@@ -455,6 +461,8 @@ class Monitor:
                         break
                     # }}}
                     elif stateName == "noAlert": # {{{
+                        tubeProTitleLastCompletion = ""
+
                         matchResultRunning = cv2.matchTemplate( # type: ignore
                             screenshotCV,
                             self.templateAlertForceReturn,
@@ -467,9 +475,6 @@ class Monitor:
                                 self.alertCount = 0
                                 self.tubeProTitleLastAlert = ""
                                 self.logger.info("Alert cleared. Back to the track")
-                            if tubeProTitleLastCompletion:
-                                tubeProTitleLastCompletion = ""
-                                self.logger.info("Clear latst completion title. Back to the track")
                         break
                     # }}}
 
