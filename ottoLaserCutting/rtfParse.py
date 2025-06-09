@@ -19,7 +19,7 @@ from pprint import pprint
 
 pr = util.pr
 LASER_PROFILE_PATH = Path(cfg.paths.otto, r"存档/耗时计算.xlsx")
-TUBEPRO_LOG_PATH   = Path(cfg.paths.otto, r"存档/切割机日志/demo")
+TUBEPRO_LOG_PATH   = Path(cfg.paths.otto, r"存档/切割机日志")
 fileOpenPat      = re.compile(r"^\(([0-9:\/ ]+?)\)打开文件：(.+)")
 segmentFirstPat  = re.compile(r"^\(([0-9:\/ ]+?)\)总零件数:(\d+), 当前零件序号:1$")
 segmentPat       = re.compile(r"^\(([0-9:\/ ]+?)\)总零件数:(\d+), 当前零件序号:(\d+)")
@@ -541,6 +541,11 @@ def rtfSimplify():
             except PermissionError:
                 pr(f"无法写入文件: {str(targetPath)}，请检查文件是否被占用或权限设置。")
 
+    if cuttingSessions:
+        pr("rtf日志精简完成")
+    else:
+        return pr("没有rtf日志被分析")
+
     # Compute the total count of for every file opened in every session
     for session in cuttingSessions:
         if session["loopEndCount"]["updatedTime"] and session["loopEndCount"]["updatedTime"] > session["segmentCount"]["updatedTime"]:
@@ -614,7 +619,3 @@ def rtfSimplify():
     util.saveWorkbook(wb)
 
 
-    if cuttingSessions:
-        pr("rtf日志精简完成")
-    else:
-        pr("没有rtf日志被分析")
