@@ -52,8 +52,14 @@ with dpg.window(
     dpg.add_separator(label="开料")
     with dpg.group(horizontal=True):
         dpg.add_button(label="程序截图", callback=lambda _: cutRecord.takeScreenshot())
+        with dpg.tooltip(dpg.last_item()):
+            dpg.add_text("Ctrl-左键: 打开截图目录\nShift-左键: 重新链接截图")
         dpg.add_button(label="耗时分析", callback=rtfParse.parsePeriodLog)
+        with dpg.tooltip(dpg.last_item()):
+            dpg.add_text("Ctrl-左键: 打开日志目录\nShift-左键: 7天内耗时分析\nAlt-左键: 365天内耗时分析\nCtrl+Shift+Alt-左键: 历史切割耗时分析(单文件)")
         dpg.add_button(label="日志分析", callback=rtfParse.rtfSimplify)
+        with dpg.tooltip(dpg.last_item()):
+            dpg.add_text("Ctrl-左键: 打开日志目录\nShift-左键: 7天内日志分析\nAlt-左键: 365天内耗时分析")
     dpg.add_separator(label="排样文件")
     with dpg.group(horizontal=True):
         dpg.add_button(label="命名检查",     callback=workpiece.workpieceNamingVerification)

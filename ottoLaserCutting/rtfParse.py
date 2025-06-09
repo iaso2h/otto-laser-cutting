@@ -286,27 +286,6 @@ def parse(
                 }
 
 
-def parseAllLog():
-    """
-    Parses all RTF log files in the specified directory (excluding files with '精简' in their names),
-    processes them using the parse() function, and saves the combined results to an Excel workbook.
-
-    Returns:
-        None: Outputs the result to a file rather than returning a value.
-    """
-    wb = Workbook()
-    for f in Path(TUBEPRO_LOG_PATH).iterdir():
-        if f.suffix != ".rtf":
-            continue
-
-        wb = parse(
-            rtfFile=f,
-            wb=wb,
-            accumulationMode=False
-                )["workbook"] # type: ignore
-    util.saveWorkbook(wb, LASER_PROFILE_PATH, True) # type: ignore
-
-
 def parseAccuLog():
     """
     Parses accumulated laser cutting logs from RTF files within the last 60 days.
@@ -361,7 +340,7 @@ def parsePeriodLog():
     elif "shift" in keySet.keys:
         timeDeltaLiteral = 7
     elif "alt" in keySet.keys:
-        return parseAllLog()
+        timeDeltaLiteral = 365
     else:
         timeDeltaLiteral = 1
 
@@ -413,7 +392,7 @@ def rtfSimplify():
     elif "shift" in keySet.keys:
         timeDeltaLiteral = 7
     elif "alt" in keySet.keys:
-        timeDeltaLiteral = 360
+        timeDeltaLiteral = 365
     else:
         timeDeltaLiteral = 1
 
