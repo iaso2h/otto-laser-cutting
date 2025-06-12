@@ -255,7 +255,7 @@ class Monitor:
         # is a blocking call—it halts the thread so we need
         # to make sure it call in a new thread then
         # complete thread after 5 seconds
-        screenshotOnCompletionDone = threading.Event()Add commentMore actions
+        screenshotOnCompletionDone = threading.Event()
         def screenshotOnCompletion(screenshot):
             try:
                 cutRecord.takeScreenshot(screenshot)

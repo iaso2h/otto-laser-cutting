@@ -327,7 +327,7 @@ def parsePeriodLog():
     Handles different parsing modes:
     - Ctrl+Shift+Alt: Parse accumulated logs (calls parseAccuLog)
     - Ctrl: Open laser profile directly
-    - Shift: Parse logs from last 7 days
+    - Shift: Parse logs from last 35 days
     - Alt: Parse all logs (calls parseAllLog)
     - No modifier: Parse logs from last 1 day
     Automatically expands time window (up to 3 attempts) if no logs found.
@@ -338,7 +338,7 @@ def parsePeriodLog():
     elif "ctrl" in keySet.keys:
         return os.startfile(LASER_PROFILE_PATH)
     elif "shift" in keySet.keys:
-        timeDeltaLiteral = 7
+        timeDeltaLiteral = 35
     elif "alt" in keySet.keys:
         timeDeltaLiteral = 365
     else:
@@ -376,7 +376,7 @@ def rtfSimplify():
     """
     Processes RTF log files in TUBEPRO_LOG_PATH based on modifier keys:
     - Ctrl: Opens the log directory
-    - Shift: Processes files from last 7 days
+    - Shift: Processes files from last 35 days
     - Alt: Processes files from last year
     - No modifier: Processes files from last day
 
@@ -390,7 +390,7 @@ def rtfSimplify():
     if "ctrl" in keySet.keys:
         return os.startfile(TUBEPRO_LOG_PATH)
     elif "shift" in keySet.keys:
-        timeDeltaLiteral = 7
+        timeDeltaLiteral = 35
     elif "alt" in keySet.keys:
         timeDeltaLiteral = 365
     else:
@@ -595,6 +595,6 @@ def rtfSimplify():
             )
     tab.tableStyleInfo = style
     ws.add_table(tab)
-    util.saveWorkbook(wb)
+    util.saveWorkbook(wb, openAfterSaveChk=True)
 
 
