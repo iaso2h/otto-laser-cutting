@@ -19,7 +19,7 @@ import win32api
 import win32con
 import pywintypes
 import psutil
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 import threading
 from pathlib import Path
 import copy
@@ -67,7 +67,7 @@ class Monitor:
         """
         self.isRunning = False
         self.lastAlertTimeStamp = 0.0
-        self.checkInterval = 5
+        self.checkInterval = 3
         self.checkCount = 0
         self.programNotFoundRetry = 60
         self.alertCooldown = 60
@@ -80,6 +80,7 @@ class Monitor:
         self.templatePausedCuttingHeadTouch = None
         self.templateCompletion01 = None
         self.templateCompletion02 = None
+        self.templateCompletion03 = None
         self.templateAlert = None
         self.templateAlertForceReturn = None
         self.templateNoAlert = None
@@ -89,6 +90,7 @@ class Monitor:
         # self.templatePausedCuttingHeadTouch:           Optional[MatLike] = None
         # self.templateCompletion01:       Optional[MatLike] = None
         # self.templateCompletion02:       Optional[MatLike] = None
+        # self.templateCompletion03:       Optional[MatLike] = None
         # self.templateAlert:            Optional[MatLike] = None
         # self.templateAlertForceReturn: Optional[MatLike] = None
         # self.templateNoAlert:          Optional[MatLike] = None
@@ -149,6 +151,7 @@ class Monitor:
             ("templatePausedCuttingHeadTouch", "pausedWithCuttingHeadTouch.png"),
             ("templateCompletion01", "completion01.png"),
             ("templateCompletion02", "completion02.png"),
+            ("templateCompletion03", "completion03.png"),
             ("templateAlert", "alert.png"),
             ("templateAlertForceReturn", "alertForceReturn.png"),
             ("templateNoAlert", "noAlert.png"),
@@ -244,6 +247,34 @@ class Monitor:
         else:
             return False
 
+    def onCompletion(self, currentTime: datetime, screenshot: Image.Image, tubeProTitleCurrent: str, stateName: str):
+        pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+        self.logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+
+        # `win32api.MessageBox` inside `takeScreenshot()`
+        # is a blocking call—it halts the thread so we need
+        # to make sure it call in a new thread then
+        # complete thread after 5 seconds
+        cutRecord.takeScreenshot(screenshot)
+
+        # Make records for monitoring
+        os.makedirs(MONITOR_PIC, exist_ok=True)
+        screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
+        self.logger.info(f"Save screenshot at {screenshotPath}")
+
+        # Send email notification
+        self.logger.info("Sending email...")
+        emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
+
+        # Check off-work hours and shutdown if necessary
+        if self.offWorkShutdownChk(currentTime):
+            self.isRunning = False
+            subprocess.call(["shutdown", "-s"])
+            self.logger.warning("Currently it's off-work hours, shutdown the machine.")
+        else:
+            self.logger.info("Currently it's work time right now, no plan for shuting down the machine.")
+
+
     def _monitor_loop(self) -> None:
         """
         Monitors the TubePro application window and performs actions based on its state.
@@ -260,13 +291,13 @@ class Monitor:
         cursorPosLast = None
         cursorPosCurrent = None
         cursorIdleCount = 0
-        currentTime = datetime.now()
-        tubeProTitleCurrent        = ""
         tubeProTitleLastCompletion = ""
         tubeProTitleLastAlert      = ""
         tubeProTitleLastNormal     = ""
         while self.isRunning:
+            currentTime = datetime.now()
             tubeProTitleCurrent = ""
+
             time.sleep(self.checkInterval)
             self.checkCount += 1
 
@@ -340,6 +371,7 @@ class Monitor:
             for stateName, attrName in (
                 ("paused",       "templatePaused"),
                 ("completion02", "templateCompletion02"),
+                ("completion03", "templateCompletion03"),
                 ("alert",        "templateAlert"),
                 ("noAlert",      "templateNoAlert"),
             ):
@@ -348,135 +380,121 @@ class Monitor:
                 _, maxVal, _, maxLoc = cv2.minMaxLoc(matchResult)
                 if maxVal >= self.similarityThreshold:
                     self.logger.info(f"Matched {stateName} with {maxVal * 100:.2f}% similarity.")
-                    if stateName == "completion02": # {{{
-                        if tubeProTitleCurrent != tubeProTitleLastCompletion:
-                            # if tubeProTitleCurrent != tubeProTitleLastNormal:
-                            #     break
+                    match stateName:
+                        case "completion02" | "completion03":
+                            if tubeProTitleCurrent != tubeProTitleLastCompletion:
+                                # if tubeProTitleCurrent != tubeProTitleLastNormal:
+                                #     break
+                                tubeProTitleLastCompletion = tubeProTitleCurrent
+                                self.onCompletion(currentTime, screenshot ,tubeProTitleCurrent, stateName)
 
-                            tubeProTitleLastCompletion = tubeProTitleCurrent
+                            break
+                        case "paused": # {{{
+                            tubeProTitleLastCompletion = ""
 
-                            pr(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
-                            self.logger.info(f'Cutting session "{tubeProTitleCurrent}" is completed, taking screenshot record.')
+                            matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
+                                screenshotCV,
+                                self.templatePausedCuttingHeadTouch,
+                                cv2.TM_CCOEFF_NORMED
+                            )
+                            _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(
+                                matchResultPausedCuttingHeadTouch
+                            )
+                            if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
+                                self.alertCount += 1
+                                self.lastAlertTimeStamp = currentTime.timestamp()
 
-                            # `win32api.MessageBox` inside `takeScreenshot()`
-                            # is a blocking call—it halts the thread so we need
-                            # to make sure it call in a new thread then
-                            # complete thread after 5 seconds
-                            cutRecord.takeScreenshot(screenshot)
+                                if (
+                                    int(currentTime.timestamp() - self.lastAlertTimeStamp)
+                                    <= self.alertCooldown
+                                ) or self.alertCount >= self.alertHaltThreshold:
+                                    pr(f"Temperarily disable auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
+                                    self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times failed in {self.alertCooldown}s")
+                                    if tubeProTitleCurrent == tubeProTitleLastAlert:
+                                        break
 
-                            # Make records for monitoring
-                            os.makedirs(MONITOR_PIC, exist_ok=True)
-                            screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
-                            self.logger.info(f"Save screenshot at {screenshotPath}")
-
-                            # Send email notification
-                            self.logger.info("Sending email...")
-                            emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
-
-                            # Check off-work hours and shutdown if necessary
-                            if self.offWorkShutdownChk(currentTime):
-                                self.isRunning = False
-                                subprocess.call(["shutdown", "-s"])
-                                self.logger.warning("Currently it's off-work hours, shutdown the machine.")
-                            else:
-                                self.logger.info("Currently it's work time right now, no plan for shuting down the machine.")
-
-                        break
-                    # }}}
-                    elif stateName == "paused": # {{{
-                        tubeProTitleLastCompletion = ""
-
-                        matchResultPausedCuttingHeadTouch = cv2.matchTemplate( # type: ignore
-                            screenshotCV,
-                            self.templatePausedCuttingHeadTouch,
-                            cv2.TM_CCOEFF_NORMED
-                        )
-                        _, maxValPausedCuttingHeadTouch, _, _ = cv2.minMaxLoc(
-                            matchResultPausedCuttingHeadTouch
-                        )
-                        if maxValPausedCuttingHeadTouch >= self.similarityThreshold:
-                            self.alertCount += 1
-                            self.lastAlertTimeStamp = currentTime.timestamp()
-
-                            if (
-                                int(currentTime.timestamp() - self.lastAlertTimeStamp)
-                                <= self.alertCooldown
-                            ) or self.alertCount >= self.alertHaltThreshold:
-                                pr(f"Temperarily disable auto-clicking due to {self.alertCount} times fail in {self.alertCooldown}s")
-                                self.logger.warning(f"Stop auto-clicking due to {self.alertCount} times failed in {self.alertCooldown}s")
-                                if tubeProTitleCurrent == tubeProTitleLastAlert:
-                                    break
-
-                                tubeProTitleLastAlert = tubeProTitleCurrent
-                                screenshotPath = util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
-                                emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
-                                # Check off-work hours and shutdown if necessary
-                                if self.offWorkShutdownChk(currentTime):
-                                    self.isRunning = False
-                                    subprocess.call(["shutdown", "-s"])
-                                    self.logger.warning("Currently it's off-work hours, shutdown the machine.")
-                            else:
-                                if self.offWorkShutdownChk(currentTime):
-                                    self.logger.warning("Cutting is paused, auto-click continue.")
-                                    screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
+                                    tubeProTitleLastAlert = tubeProTitleCurrent
+                                    screenshotPath = util.screenshotSave(screenshot, "pauseAndHalt", MONITOR_PIC)
                                     emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
-                                    savedPosition = copy.copy(hotkey.mouse.position)
-                                    time.sleep(5)
-                                    hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
-                                    hotkey.mouse.press(hotkey.Button.left)
-                                    hotkey.mouse.release(hotkey.Button.left)
-                                    hotkey.mouse.position = savedPosition
+                                    # Check off-work hours and shutdown if necessary
+                                    if self.offWorkShutdownChk(currentTime):
+                                        self.isRunning = False
+                                        subprocess.call(["shutdown", "-s"])
+                                        self.logger.warning("Currently it's off-work hours, shutdown the machine.")
                                 else:
-                                    self.logger.info("It' work time now, auto-click continue is disabled.")
+                                    if self.offWorkShutdownChk(currentTime):
+                                        self.logger.warning("Cutting is paused, auto-click continue.")
+                                        screenshotPath = util.screenshotSave(screenshot, "pauseThenContinue", MONITOR_PIC)
+                                        emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
+                                        savedPosition = copy.copy(hotkey.mouse.position)
+                                        time.sleep(5)
+                                        hotkey.mouse.position = (maxLoc[0] - 60, maxLoc[1] + 90)
+                                        hotkey.mouse.press(hotkey.Button.left)
+                                        hotkey.mouse.release(hotkey.Button.left)
+                                        hotkey.mouse.position = savedPosition
+                                    else:
+                                        self.logger.info("It' work time now, auto-click continue is disabled.")
 
 
-                        break
-                    # }}}
-                    elif stateName == "alert": # {{{
-                        tubeProTitleLastCompletion = ""
+                            break
+                        # }}}
+                        case "alert": # {{{
+                            tubeProTitleLastCompletion = ""
 
-                        self.lastAlertTimeStamp = currentTime.timestamp()
-                        matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
-                            screenshotCV,
-                            self.templateAlertForceReturn,
-                            cv2.TM_CCOEFF_NORMED
-                        )
-                        _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(
-                            matchResultAlertForceReturn
-                        )
-                        if tubeProTitleCurrent != tubeProTitleLastAlert:
-                            tubeProTitleLastAlert = tubeProTitleCurrent
-                            if maxValAlertForceReturn >= self.similarityThreshold:
-                                stateName = "alertForceReturn"
-                                # TODO: cut down the tube
-                                pr("Force return is detected.")
-                                self.logger.warning("Force return is detected.")
-                            else:
-                                pr("Alert is detected.")
-                                self.logger.warning("Alert is detected.")
+                            # TODO:
+                            self.lastAlertTimeStamp = currentTime.timestamp()
+                            matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
+                                screenshotCV,
+                                self.templateAlertForceReturn,
+                                cv2.TM_CCOEFF_NORMED
+                            )
+                            _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(
+                                matchResultAlertForceReturn
+                            )
+                            if tubeProTitleCurrent != tubeProTitleLastAlert:
+                                tubeProTitleLastAlert = tubeProTitleCurrent
+                                if maxValAlertForceReturn >= self.similarityThreshold:
+                                    stateName = "alertForceReturn"
+                                    # TODO: cut down the tube
+                                    pr("Force return is detected.")
+                                    self.logger.warning("Force return is detected.")
+                                else:
+                                    matchResultAlertForceReturn = cv2.matchTemplate( # type: ignore
+                                        screenshotCV,
+                                        self.templateAlertForceReturn,
+                                        cv2.TM_CCOEFF_NORMED
+                                    )
+                                    _, maxValAlertForceReturn, _, _ = cv2.minMaxLoc(
+                                        matchResultAlertForceReturn
+                                    )
+                                    # TODO: take screentshot when another type of completion is detected
+                                    pr("Alert is detected.")
+                                    self.logger.warning("Alert is detected.")
 
-                            screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
-                            emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
+                                screenshotPath = util.screenshotSave(screenshot, stateName, MONITOR_PIC)
+                                emailNotify.send(stateName, tubeProTitleCurrent, screenshotPath)
 
-                        break
-                    # }}}
-                    elif stateName == "noAlert": # {{{
-                        tubeProTitleLastCompletion = ""
+                            break
+                        # }}}
+                        case "noAlert": # {{{
+                            tubeProTitleLastCompletion = ""
 
-                        matchResultRunning = cv2.matchTemplate( # type: ignore
-                            screenshotCV,
-                            self.templateAlertForceReturn,
-                            cv2.TM_CCOEFF_NORMED
-                        )
-                        _, maxValRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
-                        if maxValRunning >= self.similarityThreshold:
-                            tubeProTitleLastNormal = tubeProTitleCurrent
-                            if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp > self.alertCooldown):
-                                self.alertCount = 0
-                                self.tubeProTitleLastAlert = ""
-                                self.logger.info("Alert cleared. Back to the track")
-                        break
-                    # }}}
+                            matchResultRunning = cv2.matchTemplate( # type: ignore
+                                screenshotCV,
+                                self.templateAlertForceReturn,
+                                cv2.TM_CCOEFF_NORMED
+                            )
+                            _, maxValRunning, _, _ = cv2.minMaxLoc(matchResultRunning)
+                            if maxValRunning >= self.similarityThreshold:
+                                tubeProTitleLastNormal = tubeProTitleCurrent
+                                if self.alertCount and (currentTime.timestamp() - self.lastAlertTimeStamp > self.alertCooldown):
+                                    self.alertCount = 0
+                                    self.tubeProTitleLastAlert = ""
+                                    self.logger.info("Alert cleared. Back to the track")
+                            break
+                        # }}}
+                        case _:
+                            pass
 
     def checkTemplateMatches(self):
         """
@@ -505,6 +523,7 @@ class Monitor:
             ("pausedWithCuttingHeadTouch", "templatePausedCuttingHeadTouch"),
             ("completion01",               "templateCompletion01"),
             ("completion02",               "templateCompletion02"),
+            ("completion03",               "templateCompletion03"),
             ("alert",                      "templateAlert"),
             ("alertForceReturn",           "templateAlertForceReturn"),
             ("noAlert",                    "templateNoAlert"),

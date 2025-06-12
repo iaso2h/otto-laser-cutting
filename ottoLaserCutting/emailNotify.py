@@ -15,6 +15,7 @@ password      = cfg.email.senderPassword
 emailSubjectTemplateDict = {
     "completion01":        "切割完成",
     "completion02":        "切割完成",
+    "completion03":        "切割完成",
     "pauseThenContinue": "切割头碰板",
     "alert":             "警报",
     "alertForceReturn":  "警报: 强制回原点",
