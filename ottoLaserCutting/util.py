@@ -127,7 +127,7 @@ def saveWorkbook(
         return newExcelPath
 
 
-def strStandarize(old: Path) -> Path:
+def strStandarize(srcPath: Path) -> Path:
     """
     Standardizes a file path string by performing the following operations:
     1. Unifies diameter symbols using `diametartSymbolUnify`.
@@ -138,35 +138,40 @@ def strStandarize(old: Path) -> Path:
        - Returns original path if rename fails due to permissions.
 
     Args:
-        old (Path): Original file path to standardize
+        oldPath (Path): Original file path to standardize
 
     Returns:
         Path: Standardized path if successful, original path otherwise
     """
-    if old.is_file():
-        new = str(old)
-        new = diametartSymbolUnify(new)
-        new = new.replace("_T1_", "_T1.0_")
-        new = new.replace("xT1x", "xT1.0x")
-        new = re.sub(r"\s{2,}", " ", new)
-        newPath = Path(new)
+    if srcPath.is_file():
+        refinedName = str(srcPath)
+        refinedName = diametartSymbolUnify(refinedName)
+        refinedName = refinedName.replace("_T1_", "_T1.0_")
+        refinedName = refinedName.replace("xT1x", "xT1.0x")
+        refinedName = re.sub(r"\s{2,}", " ", refinedName)
+        refinedPath = Path(refinedName)
 
-        if str(old) != str(newPath) and newPath.exists():
-            if old.stat().st_mtime > newPath.stat().st_mtime:
-                os.remove(newPath)
+        if str(srcPath) != str(refinedPath) and refinedPath.exists():
+            if srcPath.stat().st_mtime > refinedPath.stat().st_mtime:
+                os.remove(refinedPath)
+                try:
+                    os.rename(srcPath, refinedPath)
+                    return refinedPath
+                except PermissionError as e:
+                    pr(str(e))
+                    return srcPath
             else:
-                os.remove(old)
-                return old
-
-        try:
-            os.rename(old, new)
-            return Path(new)
-        except PermissionError as e:
-            pr(str(e))
-            return old
-
+                os.remove(srcPath)
+                return refinedPath
+        else:
+            try:
+                os.rename(srcPath, refinedPath)
+                return refinedPath
+            except PermissionError as e:
+                pr(str(e))
+                return srcPath
     else:
-        return old
+        return srcPath
 
 
 def getAllLaserFiles() -> List[Path]:  # {{{

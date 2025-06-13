@@ -100,32 +100,66 @@ def removeRedundantLaserFile() -> None:
     - Shows deletion count and list of deleted files
     - Uses MB_SYSTEMMODAL (4096) + MB_ICONINFORMATION (64) for the message box
     """
-    if "ctrl" in keySet.keys:
-        return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
-    rawLaserFile = []
-
     if not config.LASER_FILE_DIR_PATH.exists():
         return
 
-    for p in config.LASER_FILE_DIR_PATH.iterdir():
-        p = util.strStandarize(p)
-        if p.is_file() and "demo" not in p.stem.lower():
+
+    if "ctrl" in keySet.keys:
+        return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
+
+
+    rawLaserFile = []
+    for pathUnknown in config.LASER_FILE_DIR_PATH.iterdir():
+        p = util.strStandarize(pathUnknown)
+        if p.is_file() and "demo" not in p.stem.lower() and cfg.patterns.laserFile.match(p.name):
             rawLaserFile.append(p)
 
+
     pDeletedStr = []
-    for p in rawLaserFile:
-        laserFile = Path(p.parent, p.stem + ".zzx")
-        if laserFile.exists() and laserFile.stat().st_mtime > p.stat().st_mtime:
-            try:
-                os.remove(p)
-                pDeletedStr.append(str(p))
-            except:
-                pass
+    for p in config.LASER_FILE_DIR_PATH.iterdir():
+        if p.is_dir():
+            continue
+
+        matchResult = cfg.patterns.laserFile.match(p.name)
+        if not matchResult:
+            continue
+
+        if p.suffix == ".zx" or p.suffix == ".zzx":
+            laserFileWithParemeters = Path(p.parent, p.stem + ".zzx")
+            laserFilePlain          = Path(p.parent, p.stem + ".zx")
+            laserFilePlaceholder    = Path(p.parent, p.stem[0:matchResult.end(12)])
+        else:
+            laserFileWithParemeters = Path(p.name + ".zzx")
+            laserFilePlain          = Path(p.name + ".zx")
+            laserFilePlaceholder    = p
+
+        if laserFileWithParemeters.exists():
+            if laserFilePlain.exists() and laserFileWithParemeters.stat().st_mtime > laserFilePlain.stat().st_mtime:
+                try:
+                    os.remove(laserFilePlain)
+                    pDeletedStr.append(str(laserFilePlain))
+                except:
+                    pass
+
+            # Delete placeholder
+            if laserFilePlaceholder.exists():
+                try:
+                    os.remove(laserFilePlaceholder)
+                    pDeletedStr.append(str(laserFilePlaceholder))
+                except:
+                    pass
+        else:
+            if laserFilePlain.exists() and laserFilePlaceholder.exists():
+                try:
+                    os.remove(laserFilePlaceholder)
+                    pDeletedStr.append(str(laserFilePlaceholder))
+                except:
+                    pass
 
     if len(pDeletedStr) > 0:
-        pr(f"{len(pDeletedStr)} redundant .zx files has been deleted:")
+        pr(f"{len(pDeletedStr)} redundant files has been deleted:")
         for pStr in pDeletedStr:
-            pr(pStr)
+            pr("删除文件: " + pStr)
         win32api.MessageBox(
                     None,
                     f"{len(pDeletedStr)}个冗余文件已经被删除",
