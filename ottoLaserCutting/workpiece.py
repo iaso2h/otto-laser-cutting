@@ -125,13 +125,15 @@ def removeRedundantLaserFile() -> None:
             continue
 
         if p.suffix == ".zx" or p.suffix == ".zzx":
-            laserFileWithParemeters = Path(p.parent, p.stem + ".zzx")
-            laserFilePlain          = Path(p.parent, p.stem + ".zx")
-            laserFilePlaceholder    = Path(p.parent, p.stem[0:matchResult.end(12)])
+            laserFileWithParemeters   = Path(p.parent, p.stem + ".zzx")
+            laserFilePlain            = Path(p.parent, p.stem + ".zx")
+            laserFilePlainPlaceholder = Path(p.parent, p.stem[0:matchResult.end(12)] + ".zx")
+            laserFilePlaceholder      = Path(p.parent, p.stem[0:matchResult.end(12)])
         else:
-            laserFileWithParemeters = Path(p.name + ".zzx")
-            laserFilePlain          = Path(p.name + ".zx")
-            laserFilePlaceholder    = p
+            laserFileWithParemeters   = Path(p.name + ".zzx")
+            laserFilePlain            = Path(p.name + ".zx")
+            laserFilePlainPlaceholder = None
+            laserFilePlaceholder      = p
 
         if laserFileWithParemeters.exists():
             if laserFilePlain.exists() and laserFileWithParemeters.stat().st_mtime > laserFilePlain.stat().st_mtime:
@@ -146,6 +148,13 @@ def removeRedundantLaserFile() -> None:
                 try:
                     os.remove(laserFilePlaceholder)
                     pDeletedStr.append(str(laserFilePlaceholder))
+                except:
+                    pass
+
+            if laserFilePlainPlaceholder and laserFilePlainPlaceholder.exists() and laserFileWithParemeters.stat().st_mtime > laserFilePlainPlaceholder.stat().st_mtime:
+                try:
+                    os.remove(laserFilePlainPlaceholder)
+                    pDeletedStr.append(str(laserFilePlainPlaceholder))
                 except:
                     pass
         else:
