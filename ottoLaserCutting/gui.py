@@ -51,7 +51,7 @@ with dpg.window(
         dpg.add_text(f"最后更新: {config.LASTUPDATED}")
     dpg.add_separator(label="开料")
     with dpg.group(horizontal=True):
-        dpg.add_button(label="程序截图", callback=lambda _: cutRecord.takeScreenshot())
+        # dpg.add_button(label="程序截图", callback=lambda _: cutRecord.takeScreenshot())
         with dpg.tooltip(dpg.last_item()):
             dpg.add_text("Ctrl-左键: 打开截图目录\nShift-左键: 重新链接截图")
         dpg.add_button(label="耗时分析", callback=rtfParse.parsePeriodLog)
@@ -64,11 +64,13 @@ with dpg.window(
     with dpg.group(horizontal=True):
         dpg.add_button(label="命名检查",     callback=workpiece.workpieceNamingVerification)
         with dpg.tooltip(dpg.last_item()):
-            dpg.add_text("Shift-左键: 仅检查.zx/.zzx激光图纸文件")
+            dpg.add_text("Ctrl-左键: 打开切割文件目录/nShift-左键: 仅检查.zx/.zzx激光图纸文件")
         dpg.add_button(label="工件规格总览", callback=workpiece.exportDimensions)
         with dpg.tooltip(dpg.last_item()):
             dpg.add_text("Ctrl-左键: 打开工件规格总览目录\nShift-左键: 仅导出.zx/.zzx激光图纸文件")
         dpg.add_button(label="删除冗余排样", callback=workpiece.removeRedundantLaserFile)
+        with dpg.tooltip(dpg.last_item()):
+            dpg.add_text("Ctrl-左键: 打开切割文件目录")
     dpg.add_separator(label="开料实时检测")
     with dpg.group(horizontal=True):
         laserMonitorToggle        = dpg.add_button(label="切换检测")
