@@ -174,7 +174,7 @@ def strStandarize(srcPath: Path) -> Path:
         return srcPath
 
 
-def getAllLaserFiles() -> List[Path]:  # {{{
+def getAllLaserFiles(zxFileOnlyChk: bool=False) -> List[Path]:  # {{{
     """
     Retrieves all laser cutting files from the configured directory, excluding demo files.
 
@@ -188,6 +188,8 @@ def getAllLaserFiles() -> List[Path]:  # {{{
         return laserFilePaths
 
     for p in config.LASER_FILE_DIR_PATH.iterdir():
+        if zxFileOnlyChk and p.suffix != ".zx" and p.suffix != ".zzx":
+            continue
         p = strStandarize(p)
         if p.is_file() and "demo" not in p.stem.lower():
             laserFilePaths.append(p)

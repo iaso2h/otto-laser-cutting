@@ -67,7 +67,8 @@ def workpieceNamingVerification():
     """
     if "ctrl" in keySet.keys:
         return subprocess.Popen(rf'explorer /select, "{config.LASER_FILE_DIR_PATH}"')
-    laserFilePaths = util.getAllLaserFiles()
+    zxFileOnlyChk = True if "shift" in keySet.keys else False
+    laserFilePaths = util.getAllLaserFiles(zxFileOnlyChk)
     if not laserFilePaths:
         pr("All files match the naming convention!")
     invalidFilePathFoundChk = False
@@ -136,12 +137,19 @@ def removeRedundantLaserFile() -> None:
             laserFilePlaceholder      = p
 
         if laserFileWithParemeters.exists():
-            if laserFilePlain.exists() and laserFileWithParemeters.stat().st_mtime > laserFilePlain.stat().st_mtime:
-                try:
-                    os.remove(laserFilePlain)
-                    pDeletedStr.append(str(laserFilePlain))
-                except:
-                    pass
+            if laserFilePlain.exists():
+                if laserFileWithParemeters.stat().st_mtime > laserFilePlain.stat().st_mtime:
+                    try:
+                        os.remove(laserFilePlain)
+                        pDeletedStr.append(str(laserFilePlain))
+                    except:
+                        pass
+                else:
+                    try:
+                        os.remove(laserFileWithParemeters)
+                        pDeletedStr.append(str(laserFileWithParemeters))
+                    except:
+                        pass
 
             # Delete placeholder
             if laserFilePlaceholder.exists():
@@ -206,12 +214,13 @@ def exportDimensions():
     - Various tube types (main tube, handle tube, etc.)
     - Area calculation overrides
     """
+    zxFileOnlyChk = True if "shift" in keySet.keys else False
     dstPath1 = WORKPIECE_INFO_PATH
     dstPath2 = Path(cfg.paths.warehousing, "零件规格总览.xlsx")
     boldFont = Font(bold=True)
     if "ctrl" in keySet.keys:
         return os.startfile(dstPath1)
-    laserFilePaths = util.getAllLaserFiles()
+    laserFilePaths = util.getAllLaserFiles(zxFileOnlyChk)
     with open(WORKPIECE_DICT, "r", encoding="utf-8") as f:
         workpieceDict = json.load(f)
 
