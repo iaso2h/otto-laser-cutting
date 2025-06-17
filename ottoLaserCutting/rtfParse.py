@@ -441,6 +441,9 @@ def rtfSimplify():
                         f"{now.year}/{timeStamp}",
                         "%Y/%m/%d %H:%M:%S"
                     )
+                    if timeObj > now:
+                        timeObj = timeObj.replace(year=timeObj.year - 1)
+
                     if not cuttingSessions or cuttingSessions[len(cuttingSessions) - 1]["fileName"]["value"] != currentFileOpen:
                         cuttingSession = {
                             "fileName":       {"value": currentFileOpen, "updatedTime": timeObj },
@@ -460,6 +463,8 @@ def rtfSimplify():
                         f"{now.year}/{timeStamp}",
                         "%Y/%m/%d %H:%M:%S"
                     )
+                    if timeObj > now:
+                        timeObj = timeObj.replace(year=timeObj.year - 1)
                     cuttingSessions[len(cuttingSessions) - 1]["segmentTotal"] = {
                         "value": int(segmentMatch.group(2)),
                         "updatedTime": timeObj
@@ -474,6 +479,8 @@ def rtfSimplify():
                         f"{now.year}/{timeStamp}",
                         "%Y/%m/%d %H:%M:%S"
                     )
+                    if timeObj > now:
+                        timeObj = timeObj.replace(year=timeObj.year - 1)
                     cuttingSessions[len(cuttingSessions) - 1]["scheduleTotal"] = {
                         "value": int(scheduelTotalMatch.group(2)),
                         "updatedTime": timeObj
@@ -484,6 +491,8 @@ def rtfSimplify():
                         f"{now.year}/{timeStamp}",
                         "%Y/%m/%d %H:%M:%S"
                     )
+                    if timeObj > now:
+                        timeObj = timeObj.replace(year=timeObj.year - 1)
                     cuttingSessions[len(cuttingSessions) - 1]["loopEndCount"] = {
                         "value": int(loopEndMatch.group(2)),
                         "updatedTime": timeObj
